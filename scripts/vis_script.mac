@@ -1,0 +1,9 @@
+/det/select Box
+
+/vis/filtering/trajectories/create/chargeFilter
+/vis/filtering/trajectories/chargeFilter-0/add 0
+/vis/filtering/trajectories/chargeFilter-0/invert true
+/vis/filtering/trajectories/chargeFilter-0/verbose false
+/vis/filtering/trajectories/chargeFilter-0/active true
+
+/vis/ogl/set/displayListLimit 1000000

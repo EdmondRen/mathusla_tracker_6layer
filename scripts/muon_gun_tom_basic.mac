@@ -1,0 +1,19 @@
+/det/select Box
+
+/vis/filtering/trajectories/create/chargeFilter
+/vis/filtering/trajectories/chargeFilter-0/add 0
+/vis/filtering/trajectories/chargeFilter-0/invert true
+/vis/filtering/trajectories/chargeFilter-0/verbose false
+/vis/filtering/trajectories/chargeFilter-0/active true
+
+/gen/select basic
+
+/gen/basic/id 13
+/gen/basic/t0 0 ns
+/gen/basic/vertex 120 0 -20 m
+/gen/basic/p_unit 0 0 1
+
+
+/gen/basic/ke {energy} GeV
+
+/run/beamOn {count}
