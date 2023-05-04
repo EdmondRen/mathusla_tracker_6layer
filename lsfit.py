@@ -124,38 +124,58 @@ def fit_track_scipy(hits, guess):
     return res
 
 
-def do_ls(filename, nfit=None):
-    # tfile = root.TFile.Open(filename)
-    # Tree = tfile.Get("integral_tree")
+def get_km(filename, results_fit = None, tree_name="integral_tree", nevents=-1):
+    """
+    Parameters
+    ---
+    nevents: 
+      -1: all events
+      (start, stop) from start to stop
+    """
     
-    ev = event.Event(filename, 0, tree_name="integral_tree")
-    Tree=ev.Tree
-    cut=cutflow.sample_space("")
-    nevents = int(Tree.GetEntries())    
+    if results_fit is None:
+        results_fit={}
 
-    truth=[]
-    truth_nlayer=[]
+        
+    results_fit["truth"]=[]
+    results_fit["truth_nlayer"]=[]
+        
+    results_fit["recon"]=[]
+    results_fit["recon_error"]=[]          # KF parameter uncertainty. Already taken sqrt()
+    results_fit["par_km_ndigi"]=[]          # Total number of digitized hits
+    results_fit["par_km_ndigitrack"]=[]     #  number of digitized hits in the track
+    results_fit["par_km_hitinds"]=[]        # List of indices of hits that are used in the track
+    results_fit["par_km_trackind"]=[]       # index of the track the parameter of which is pulled 
+    results_fit["par_km_pdgids"]=[]         # List of PDG id of hits in this track 
+    results_fit["par_km_chi2"]=[]           # KF fit chi2
+    results_fit["mask_recon_success"]=[]    # Boolean mask 
+
+    results_fit["entry"]=[]    # ROOT event entry number
     
-    recon=[]
-    recon_unc=[]
-    recon_ls=[]
-    recon_ls_unc=[]
+    ev = event.Event(filename, 0, tree_name=tree_name)
+    Tree=ev.Tree
+    nevents_total = int(ev.Tree.GetEntries())
+    cut=cutflow.sample_space("")
     
-    ndigi_total=[]
-    ndigi_track=[]
-    ndigi_inds=[]
-    ntracks=[]
-    mask_recon_success=[]
-    
-    if nfit is None:
-        nfit=nevents
-    for Entry in tqdm(range(nfit)):
-    # for Entry in range(40):
-        #Tree.GetEntry(Entry)
-        ev.EventNumber=Entry
-        ev.Tree.GetEntry(Entry)
-        hits = get_digi_hits(ev)
-                
+    if nevents==-1:
+        nevents = [0, nevents_total]
+    elif type(nevents) is int:
+        if nevents_total<nevents:
+            print(f"Requested events exceed total {nevents_total}")
+        nevents = [0, min(nevents,nevents_total)]
+    else:
+        if nevents_total<nevents[1]:
+            print(f"Requested events exceed total {nevents_total}")        
+        nevents = [nevents[0], min(nevents[1],nevents_total)]
+
+    for i_event in tqdm(range(nevents[0], nevents[1])):
+        ev.EventNumber=i_event
+        ev.Tree.GetEntry(i_event)
+        
+        par_km_ndigi = len(ev.Tree.Digi_x)
+        
+        results_fit["entry"].append(i_event)
+        
         # Get truth (speed need to be calculated by hand)
         try:
             # Truth position and speed
@@ -163,60 +183,112 @@ def do_ls(filename, nfit=None):
             vx=(Tree.Hit_x[1]-Tree.Hit_x[0])/dt
             vy=(Tree.Hit_y[1]-Tree.Hit_y[0])/dt
             vz=(Tree.Hit_z[1]-Tree.Hit_z[0])/dt
-            truth.append([Tree.Hit_z[0], Tree.Hit_x[0], Tree.Hit_y[0], Tree.Hit_time[0],vz,vx,vy])  
+            truth = [Tree.Hit_x[0], Tree.Hit_y[0], Tree.Hit_z[0], Tree.Hit_time[0],vx,vy,vz]
             
             # Truth number of layer the first partical goes through
             pdgids = np.array([Tree.Hit_particlePdgId[i] for i in range(len(Tree.Hit_particlePdgId))])
             ind_lasthit = int(np.argmax(pdgids!=pdgids[0]))-1
             y_lasthit = Tree.Hit_y[ind_lasthit]
             y_layer = cut.in_layer(y_lasthit)
-            truth_nlayer.append(y_layer)      
+
+            results_fit["truth"].append(truth)  
+            results_fit["truth_nlayer"].append(y_layer)      
             
         except:
-            truth.append([-9999, -9999, -9999, -9999, -9999, -9999, -9999])
-            truth_nlayer.append(-9999)
-           
+            results_fit["truth"].append([-9999, -9999, -9999, -9999, -9999, -9999, -9999])
+            results_fit["truth_nlayer"].append(-9999)
             
         
+        
+        # Use Try to only process events with kalman reconstruction
         # If there is reconstruction:
-        if len(Tree.Track_k_m_z0)==0:
-            recon.append([-9990, -9990, -9990, -9990, -9990, -9990, -9990])
-            recon_unc.append([-9990, -9990, -9990, -9990, -9990, -9990, -9990])
-            recon_ls.append([-9990, -9990, -9990, -9990, -9990, -9990, -9990])
-            recon_ls_unc.append([-9990, -9990, -9990, -9990, -9990, -9990, -9990])            
-            ndigi_total.append(-9999)
-            ndigi_track.append(-9999)
-            ndigi_inds.append([-9999])
-            ntracks.append(-9999)
-            mask_recon_success.append(False)
+        if len(ev.Tree.Track_k_m_z0)==0:
+            par_km = [-9990, -9990, -9990, -9990, -9990, -9990, -9990]
+            par_km_error = [-9990, -9990, -9990, -9990, -9990, -9990, -9990]
+            
+            par_km_ndigitrack = -1
+            par_km_chi2 = -1
+            par_km_pdgids = [-99999]
+            par_km_hitinds = [-99999]
+            par_km_trackind = -1
+            results_fit["mask_recon_success"].append(False)
+            
         else:
+            
             # Check which one is closest to truth
             track_digi_hit_inds = util.unzip(Tree.Track_k_m_hitIndices)
             track_digi_hit_len = np.array([len(i) for i in track_digi_hit_inds])
             track_chi2s = []
-            
             if len(track_digi_hit_inds)>1:
                 for track_ind in range(len(track_digi_hit_inds)):
                     recon_i = [Tree.Track_k_m_z0[track_ind], Tree.Track_k_m_x0[track_ind], Tree.Track_k_m_y0[track_ind], Tree.Track_k_m_t0[track_ind],Tree.Track_k_m_velZ[track_ind], Tree.Track_k_m_velX[track_ind], Tree.Track_k_m_velY[track_ind]]
                     recon_i_unc = [Tree.Track_k_m_ErrorZ0[track_ind], Tree.Track_k_m_ErrorX0[track_ind], Tree.Track_k_m_ErrorY0[track_ind], Tree.Track_k_m_ErrorT0[track_ind],Tree.Track_k_m_ErrorVz[track_ind], Tree.Track_k_m_ErrorVx[track_ind], Tree.Track_k_m_ErrorVy[track_ind]]
-                    chi2 = util.chi2_calc(recon_i,truth[-1],recon_i_unc)
+                    chi2 = util.chi2_calc(recon_i,truth,recon_i_unc)
                     track_chi2s.append(chi2)
                 #     print("s")
                 #     print(track_chi2s)
                 track_ind = int(np.argmin(track_chi2s))
             else:
                 track_ind=0
-            recon_i = [Tree.Track_k_m_z0[track_ind], Tree.Track_k_m_x0[track_ind], Tree.Track_k_m_y0[track_ind], Tree.Track_k_m_t0[track_ind],Tree.Track_k_m_velZ[track_ind], Tree.Track_k_m_velX[track_ind], Tree.Track_k_m_velY[track_ind]]
-            recon_i_unc = [Tree.Track_k_m_ErrorZ0[track_ind], Tree.Track_k_m_ErrorX0[track_ind], Tree.Track_k_m_ErrorY0[track_ind], Tree.Track_k_m_ErrorT0[track_ind],Tree.Track_k_m_ErrorVz[track_ind], Tree.Track_k_m_ErrorVx[track_ind], Tree.Track_k_m_ErrorVy[track_ind]]
-            
-            recon.append(recon_i)
-            recon_unc.append(recon_i_unc)
-            ndigi_total.append(len(Tree.Digi_x))
-            ndigi_track.append(track_digi_hit_len[track_ind])
-            ndigi_inds.append(track_digi_hit_inds[track_ind])
-            ntracks.append(len(track_digi_hit_inds))
-            mask_recon_success.append(True)                
-            
+                
+                
+            track_hits_inds=track_digi_hit_inds[track_ind]   
+            par_km_ndigitrack = len(track_hits_inds)
+            par_km_pdgids = [ev.Tree.Digi_pdg_id[i] for i in track_hits_inds]
+            par_km_hitinds = track_hits_inds
+            par_km_trackind = track_ind
+
+            par_km =[ev.Tree.Track_k_m_x0[track_ind], ev.Tree.Track_k_m_y0[track_ind], ev.Tree.Track_k_m_z0[track_ind], ev.Tree.Track_k_m_t0[track_ind], ev.Tree.Track_k_m_velX[track_ind], ev.Tree.Track_k_m_velY[track_ind], ev.Tree.Track_k_m_velZ[track_ind]]
+            par_km_error =[ev.Tree.Track_k_m_ErrorX0[track_ind], ev.Tree.Track_k_m_ErrorY0[track_ind], ev.Tree.Track_k_m_ErrorZ0[track_ind], ev.Tree.Track_k_m_ErrorT0[track_ind], ev.Tree.Track_k_m_ErrorVx[track_ind], ev.Tree.Track_k_m_ErrorVy[track_ind], ev.Tree.Track_k_m_ErrorVz[track_ind]]
+            par_km_chi2 = ev.Tree.Track_k_m_smooth_chi_sum[track_ind]
+
+
+            results_fit["mask_recon_success"].append(True)
+        
+        results_fit["recon"].append(par_km)
+        results_fit["recon_error"].append(np.sqrt(par_km_error))
+        results_fit["par_km_ndigi"].append(par_km_ndigi)
+        results_fit["par_km_ndigitrack"].append(par_km_ndigitrack)
+        results_fit["par_km_hitinds"].append(par_km_hitinds)
+        results_fit["par_km_trackind"].append(par_km_trackind)
+        results_fit["par_km_chi2"].append(par_km_chi2)
+        results_fit["par_km_pdgids"].append(par_km_pdgids)
+        
+    for key in results_fit:
+        results_fit[key]=np.array(results_fit[key])
+        
+    return results_fit
+
+
+def do_ls(filename, results_kf = None, nfit=-1):
+    # tfile = root.TFile.Open(filename)
+    # Tree = tfile.Get("integral_tree")
+    
+    ev = event.Event(filename, 0, tree_name="integral_tree")
+    Tree=ev.Tree
+    cut=cutflow.sample_space("")
+
+    if results_kf is None:
+        results_kf = get_km(filename, nevents=nfit)
+    nevents = len(results_kf["mask_recon_success"])  
+        
+    results_ls = {}    
+    recon_ls=[]
+    recon_ls_unc=[]
+        
+    for Entry in tqdm(range(results_kf["entry"][0], results_kf["entry"][-1]+1)):
+        if results_kf["mask_recon_success"][Entry]==False:
+            recon_ls.append([-9990, -9990, -9990, -9990, -9990, -9990, -9990])
+            recon_ls_unc.append( [-9990, -9990, -9990, -9990, -9990, -9990, -9990])
+            continue
+        else:
+            ev.EventNumber=Entry
+            ev.Tree.GetEntry(Entry)
+            hits = get_digi_hits(ev)            
+        
+            # Check which one is closest to truth
+            track_digi_hit_inds = util.unzip(Tree.Track_k_m_hitIndices)
+            track_ind = results_kf["par_km_trackind"][Entry]
             
             # Do LS fit
             hits_fit=np.array(hits)[track_digi_hit_inds[track_ind]]
@@ -225,77 +297,13 @@ def do_ls(filename, nfit=None):
             par_fit=np.array(list(fit1.values))
             par_fit_error=np.array(list(fit1.errors))
             # Save results
-            recon_ls.append(par_fit[[2,0,1,3,6,4,5]])
-            recon_ls_unc.append(par_fit_error[[2,0,1,3,6,4,5]])
+            recon_ls.append(par_fit)
+            recon_ls_unc.append(par_fit_error)
             
-                
-    results={
-        "truth":np.array(truth),
-        "truth_nlayer":np.array(truth_nlayer),
-        "recon":np.array(recon),
-        "recon_unc":np.array(recon_unc),
-        "recon_ls":np.array(recon_ls),
-        "recon_ls_unc":np.array(recon_ls_unc),        
-        "ndigi_total":np.array(ndigi_total),
-        "ndigi_track":np.array(ndigi_track),
-        "ndigi_inds":np.array(ndigi_inds),
-        "mask_recon_success":np.array(mask_recon_success)
-    }
     
-    return results
-
-
-
-def get_km(filename, results_fit, tree_name="integral_tree"):
-    results_fit["par_km"]=[]
-    results_fit["par_km_error"]=[]
-    results_fit["par_km_truth"]=[]
-    results_fit["par_km_ndigi"]=[]
-    results_fit["par_km_ndigitrack"]=[]
-    results_fit["par_km_chi2"]=[]
+    results_ls["truth"] = results_kf["truth"]
+    results_ls["mask_recon_success"] = results_kf["mask_recon_success"]
+    results_ls["recon"] = recon_ls
+    results_ls["recon_error"] = recon_ls_unc
     
-    ev = event.Event(filename, 0, tree_name=tree_name)
-    nevents = int(ev.Tree.GetEntries())
-    cut=cutflow.sample_space("")
-
-
-    for i_event in tqdm(range(nevents)):
-        ev.EventNumber=i_event
-        ev.Tree.GetEntry(i_event)
-
-        hits = get_digi_hits(ev)
-        nhits=len(ev.Tree.Hit_x)
-        
-        # Use Try to only process events with kalman reconstruction
-        try:
-            digi_hit_inds = util.unzip(ev.Tree.Track_k_m_hitIndices)
-            digi_hit_len = np.array([len(i) for i in digi_hit_inds])
-            track_ind = int(np.argmax(digi_hit_len==7))
-            track_hits_inds=digi_hit_inds[track_ind]   
-            hits_fit=np.array(hits)[track_hits_inds]
-        
-            par_km =[ev.Tree.Track_k_m_x0[track_ind], ev.Tree.Track_k_m_y0[track_ind], ev.Tree.Track_k_m_z0[track_ind], ev.Tree.Track_k_m_t0[track_ind], ev.Tree.Track_k_m_velX[track_ind], ev.Tree.Track_k_m_velY[track_ind], ev.Tree.Track_k_m_velZ[track_ind]]
-            par_km_error =[ev.Tree.Track_k_m_ErrorX0[track_ind], ev.Tree.Track_k_m_ErrorY0[track_ind], ev.Tree.Track_k_m_ErrorZ0[track_ind], ev.Tree.Track_k_m_ErrorT0[track_ind], ev.Tree.Track_k_m_ErrorVx[track_ind], ev.Tree.Track_k_m_ErrorVy[track_ind], ev.Tree.Track_k_m_ErrorVz[track_ind]]
-            xyz0_km = util.coord_cms2det(np.array(par_km[:3]))
-            xyzV_km = np.array([par_km_error[2+4],par_km_error[0+4],-par_km_error[1+4]])
-            
-        except:
-            continue    
-        results_fit["par_km"].append(par_km)
-        results_fit["par_km_error"].append(par_km_error)
-        results_fit["par_km_ndigi"].append(len(ev.Tree.Digi_x))
-        results_fit["par_km_ndigitrack"].append(digi_hit_len[track_ind])
-        results_fit["par_km_chi2"].append(ev.Tree.Track_k_m_smooth_chi_sum[track_ind])
-        
-        Tree=ev.Tree
-        dt=Tree.Hit_time[1]-Tree.Hit_time[0]
-        vx=(Tree.Hit_x[1]-Tree.Hit_x[0])/dt
-        vy=(Tree.Hit_y[1]-Tree.Hit_y[0])/dt
-        vz=(Tree.Hit_z[1]-Tree.Hit_z[0])/dt
-        par_truth = [Tree.Hit_x[0], Tree.Hit_y[0], Tree.Hit_z[0], Tree.Hit_time[0],vx,vy,vz]
-        results_fit["par_km_truth"].append(par_truth)        
-        
-    # results_fit["par_km"]=np.array(results_fit["par_km"])
-    # results_fit["par_km_error"]=np.array(results_fit["par_km_error"])
-    for key in results_fit:
-        results_fit[key]=np.array(results_fit[key])
+    return results_ls, results_kf

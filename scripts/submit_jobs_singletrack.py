@@ -24,42 +24,45 @@ def main():
     
     
     
-    Log_Dir = '/project/def-mdiamond/tomren/mathusla/data/fit_study/log/'
-    DataDir = '/project/def-mdiamond/tomren/mathusla/data/fit_study/'
+    Log_Dir = '/project/def-mdiamond/tomren/mathusla/data/fit_study_6layer/log/'
+    DataDir = '/project/def-mdiamond/tomren/mathusla/data/fit_study_6layer/'
 
     simulation='/project/def-mdiamond/tomren/mathusla/Mu-Simulation/simulation '
     tracker='/project/def-mdiamond/tomren/mathusla/MATHUSLA-Kalman-Algorithm/tracker/build/tracker '
 
-    EnergyList=[[0.5, 1, 3, 10, 50, 1000],[0.5, 1, 3, 10, 100]]
+    EnergyList=[[0.1, 0.2, 0.5, 1, 3, 10, 30, 100], [0.1, 0.2, 0.5, 1, 3, 10, 30, 100], [0.1, 0.2, 0.5, 1, 3, 10, 30, 100]]
     EventCount=40000
     TrackerRuns=1
-    Scripts= ['muon_gun_tom_range.mac','pion_gun_tom_range.mac']
+    Scripts= ['muon_gun_tom_range.mac','pion_gun_tom_range.mac','electron_gun_tom_range.mac']
+    Names = ["muon", "pion", "electron"]
     CORES = 1
     
-    #EnergyList=[0.5]
-#    EventCount=40000
- #   TrackerRuns=1
-  #  Scripts= ['pion_gun_tom_range.mac']
 
     # make directory for log
     os.system(f"mkdir -p {Log_Dir}")
 
     for i, sim_script in enumerate(Scripts):
-        if i==0:
-            continue
         for energy in EnergyList[i]:
+            job_script=f"""mkdir -p {DataDir}/{Names[i]}_{energy}_GeV 
+{simulation} -j1 -q  -o {DataDir}/{Names[i]}_{energy}_GeV  -s {sim_script} energy {energy} count {EventCount}  
+for f in {DataDir}/{Names[i]}_{energy}_GeV/*/*/run*.root; do 
+    {tracker} $f `dirname $f` 
+    mv `dirname $f`/stat0.root `dirname $f`/stat_seedmod.root -f 
+done 
+"""
             if i==0:
-                job_script=f"""mkdir -p {DataDir}/muon_{energy}_GeV \n
-{simulation} -j1 -q  -o {DataDir}/muon_{energy}_GeV  -s {sim_script} energy {energy} count {EventCount}            
-                """
-            elif i==1:
-                job_script=f"""mkdir -p {DataDir}/pion_{energy}_GeV \n
-{simulation} -j{CORES} -q  -o {DataDir}/pion_{energy}_GeV  -s {sim_script} energy {energy} count {EventCount}            
-                """ 
+                continue
+                
+            # Run longer time for pions at 10 GeV and above.
+            if (i in [1,2]) and energy >3:
+                hours_mod = 15
+            else:
+                # continue
+                hours_mod = hours
                 
             # This is the core function to submit job script
             script_prefix=sim_script.split("_")[0]
-            submit_script(job_script, f"{script_prefix}_{energy}", blockidx=0, hours=hours, cores=CORES, log_dir=Log_Dir, job_name="reco", system=system, slurm_account=slurm_account, slurm_partition='', debug=DEBUG, verbose=verbose)
+            submit_script(job_script, f"{script_prefix}_{energy}", blockidx=0, hours=hours_mod, cores=CORES, log_dir=Log_Dir, job_name="reco", system=system, slurm_account=slurm_account, slurm_partition='', debug=DEBUG, verbose=verbose)
             
 if __name__ == "__main__":
     main()            

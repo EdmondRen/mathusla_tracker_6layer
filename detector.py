@@ -14,11 +14,26 @@ class Detector:
  
     WallLimits = [ BoxLimits[0], [BoxLimits[1][0],BoxLimits[1][0] + 2000.0 ] ] # [x,y] [cm,cm]
 
-    LayerYLims = [ [6001., 6004.],  [6104., 6107.], [6207., 6210.], [8001., 8004.], [8104., 8107.], [8501., 8504.], [8604., 8607.], [8707., 8710.], [8810., 8813.], [8913., 8916.]  ]
-    for i, layer in enumerate(LayerYLims):
-        for j, lim in enumerate(layer):
-            LayerYLims[i][j] += 547 + 2
+    # LayerYLims = [ [6001., 6004.],  [6104., 6107.], [6207., 6210.], [8001., 8004.], [8104., 8107.], [8501., 8504.], [8604., 8607.], [8707., 8710.], [8810., 8813.], [8913., 8916.]  ]
+    # for i, layer in enumerate(LayerYLims):
+    #     for j, lim in enumerate(layer):
+    #         LayerYLims[i][j] += 547 + 2
+    
+    # 2023-04-25 Tom: changing to 6 layers. New numbers pull from simulation
 
+    scintillator_height_all = 2.6 # 2cm +0.3*2Al case
+    cm = 1
+    LayerYLims=[[6547.3*cm - 0.3*cm, 6549.3*cm + 0.3*cm],
+                [6629.9*cm - 0.3*cm, 6631.9*cm + 0.3*cm],
+                [8547.3*cm - 0.3*cm, 8549.3*cm + 0.3*cm],
+                [8629.9*cm - 0.3*cm, 8631.9*cm + 0.3*cm],
+                [9132.5*cm - 0.3*cm, 9134.5*cm + 0.3*cm],
+                [9215.1*cm - 0.3*cm, 9217.1*cm + 0.3*cm],
+                [9297.7*cm - 0.3*cm, 9299.7*cm + 0.3*cm],
+                [9380.3*cm - 0.3*cm, 9382.3*cm + 0.3*cm],
+                [9462.9*cm - 0.3*cm, 9464.9*cm + 0.3*cm],
+                [9545.5*cm - 0.3*cm, 9547.5*cm + 0.3*cm]]
+    
     y_floor = LayerYLims[2][1]
     z_wall = BoxLimits[2][0] + 3 # [cm] add 3 cm to account for wall width
 
@@ -47,14 +62,14 @@ class Detector:
         self.scintillator_length = self.scint_x_edge_length
         self.scintillator_width = self.scint_y_edge_length
         self.scintillator_height = 0.02
-        self.scintillator_casing_thickness = 0.005
+        self.scintillator_casing_thickness = 0.003
 
         self.steel_height = 0.03
 
         self.air_gap = 30
 
-        self.layer_spacing = 1.0
-        self.layer_count   = 7
+        self.layer_spacing = 0.8
+        self.layer_count   = 8
 
         self.module_x_edge_length = 9.0
         self.module_y_edge_length = 9.0
@@ -68,7 +83,8 @@ class Detector:
                                     5 + 1*self.layer_spacing + 1.5*self.layer_w_case,
                                     5 + 2*self.layer_spacing + 2.5*self.layer_w_case,
                                     5 + 3*self.layer_spacing + 3.5*self.layer_w_case,
-                                    5 + 4*self.layer_spacing + 4.5*self.layer_w_case]
+                                    5 + 4*self.layer_spacing + 4.5*self.layer_w_case,
+                                    5 + 5*self.layer_spacing + 5.5*self.layer_w_case]
 
         self.module_x_displacement = [i*(self.module_x_edge_length + 1.0) -0.5 * self.x_edge_length + 0.5*self.module_x_edge_length for i in range(10)]
         self.module_y_displacement = [i*(self.module_y_edge_length + 1.0) -0.5 * self.y_edge_length + 0.5*self.module_y_edge_length for i in range(10)]
@@ -238,11 +254,12 @@ class Detector:
     
 class Layer():
     """
-    Layer index: 0-9. floor:0-2, mid track: 3-4, top layers: 5-9
+    Layer index: 0-9. floor:0-1, mid track: 2-3, top layers: 4-9
+    layer 2 is more accurate along the beamline.
     
     """
     detector=Detector()
-    optic_fiber_n = 1.500
+    optic_fiber_n = 1.58
     
     @staticmethod
     def width(index): 
@@ -254,7 +271,7 @@ class Layer():
     @staticmethod
     def uncertainty(index):
         detector=Layer.detector
-        if index%2==0:
+        if index%2==1:
             return  [detector.scintillator_width/np.sqrt(12.),\
                     detector.scintillator_height/np.sqrt(12.),\
                     detector.time_resolution*(sp.constants.c/Layer.optic_fiber_n)/np.sqrt(2)]

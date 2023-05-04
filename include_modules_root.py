@@ -143,7 +143,7 @@ def get_info(h):
 import ROOT
 import array
 import root_numpy
-def fit_tg(x,y, xerr=None, yerr=None, function="gaus",option="S",n0=None, fix=None,
+def fit_tg(x,y, xerr=None, yerr=None, function="gaus",option="QS",n0=None, fix=None,
          poisson_yerr=True):
     
     """

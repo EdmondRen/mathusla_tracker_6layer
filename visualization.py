@@ -356,11 +356,17 @@ def drawdet_xz(use_cms=False, axis=None, layer_height_vis=0.2, alpha=0.1):
                   det.module_x_displacement[ix]+det.module_x_edge_length*0.5,
                   det.module_x_displacement[ix]+det.module_x_edge_length*0.5]
         # Loop 7 layers
-        for iz in range(7):
-            layerZ = [det.layer_z_displacement[iz]-layer_height_vis*0.5,
-                     det.layer_z_displacement[iz]+layer_height_vis*0.5,
-                     det.layer_z_displacement[iz]+layer_height_vis*0.5,
-                     det.layer_z_displacement[iz]-layer_height_vis*0.5,]
+        for iz in range(len(det.LayerYLims)):
+            # yi = 0.5*(det.LayerYLims[i][0] + det.LayerYLims[i][1])
+            # layerZ = [det.layer_z_displacement[iz]-layer_height_vis*0.5,
+            #          det.layer_z_displacement[iz]+layer_height_vis*0.5,
+            #          det.layer_z_displacement[iz]+layer_height_vis*0.5,
+            #          det.layer_z_displacement[iz]-layer_height_vis*0.5,]
+            yi = (0.5*(det.LayerYLims[iz][0] + det.LayerYLims[iz][1])-8550)*0.01 # minus the y offset and turns into meter
+            layerZ = [yi-layer_height_vis*0.5,
+                     yi+layer_height_vis*0.5,
+                     yi+layer_height_vis*0.5,
+                     yi-layer_height_vis*0.5,]            
             verts.append(np.transpose([layerX, layerZ]))
 
     col = collections.PolyCollection(verts, alpha=alpha)

@@ -1,12 +1,12 @@
 # EnergyList=(1000)
-EnergyList=(0.5 1 3 10 50 1000)
+EnergyList=(0.1 0.2 0.5 1 3 10 30 100)
 EnergyList2=(0.5 1 3 10 100)
 #EnergyList=(100)
 
 EventCount=200
 TrackerRuns=200
 
-DataDir='/project/def-mdiamond/tomren/mathusla/data/fit_study/'
+DataDir='/project/def-mdiamond/tomren/mathusla/data/fit_study_6layer/'
 Script='muon_gun_tom_range.mac'
 
 simulation='/project/def-mdiamond/tomren/mathusla/Mu-Simulation/simulation '
@@ -53,12 +53,12 @@ do
   
 done
 
-for energy in ${EnergyList2[@]}
-do
-  for f in ${DataDir}/pion_${energy}_GeV/*/*/run*.root; do
-    ${tracker} $f `dirname ${f}`
-    #Rename the output for a unique index
-    mv `dirname ${f}`/stat0.root `dirname ${f}`/stat_seedmod.root -f
-  done
+# for energy in ${EnergyList2[@]}
+# do
+#   for f in ${DataDir}/pion_${energy}_GeV/*/*/run*.root; do
+#     ${tracker} $f `dirname ${f}`
+#     #Rename the output for a unique index
+#     mv `dirname ${f}`/stat0.root `dirname ${f}`/stat_seedmod.root -f
+#   done
 
-done
+# done

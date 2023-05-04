@@ -42,7 +42,7 @@ source /cvmfs/cdms.opensciencegrid.org/setup_cdms.sh V04-03
 #
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task={cores}
-#SBATCH --mem-per-cpu=4g
+#SBATCH --mem-per-cpu=2048M
 #
 #SBATCH --time={hours}:00:00
 
