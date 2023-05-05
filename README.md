@@ -1,10 +1,41 @@
-# 1. Kalman filter
+# 1. Setting up environment on Cedar
 
-- KF on toy data: `15_kalman_filter_toydata.ipynb`
+## 1.0 Prerequisite
 
-# 2. Single track study
+All required packages can be loaded with `module`:
+```bash
+$ module load qt/5.15.2 gcc/9.3.0 StdEnv/2020   root/6.26.06  eigen/3.3.7
+```
 
-- Study of LS: `25_LS_fit_2.ipynb`
-- Run LS on all data files: `34_LS_fit_all.joblib`
-- Parameter resolution and efficiency: `40_trcker_validation.ipynb` (muon)， `40_trcker_validation_pion.ipynb` (pion)
-- Summarize the resolution and efficiency: `42_tracker_muonpion.joblib`
+## 1.1 Simulation
+
+
+## 1.2 Tracker
+
+The Tracker code is located at: https://github.com/EdmondRen/MATHUSLA-Kalman-Algorithm
+
+**Build**
+```bash
+$ cd tracker/build
+$ cmake ..
+$ make 
+```
+
+**Run**   
+At this point, the tracker executable is available in the /build/ directory. Note that the /build/ directory MUST be placed in the /tracker/ directory.
+```bash
+$ ./tracker path_to_input_file path_to_write_output 
+```
+
+## 1.3 Analysis
+
+We are using jupyter interface: https://jupyterhub2.cedar.computecanada.ca/
+
+In JupyterHub, launch a terminal. Run
+`/project/def-mdiamond/soft/singularity/cdmsfull_V04-07-00/cdmskernel_install.sh`
+
+Open a Launcher, there should be a new kernel titled "Singularity V04-07". Clicking on it will open a notebook with this kernel.
+
+# 2. Analysis outline
+
+## 2.1 Single track study

@@ -23,16 +23,16 @@ class Detector:
 
     scintillator_height_all = 2.6 # 2cm +0.3*2Al case
     cm = 1
-    LayerYLims=[[6547.3*cm - 0.3*cm, 6549.3*cm + 0.3*cm],
-                [6629.9*cm - 0.3*cm, 6631.9*cm + 0.3*cm],
-                [8547.3*cm - 0.3*cm, 8549.3*cm + 0.3*cm],
-                [8629.9*cm - 0.3*cm, 8631.9*cm + 0.3*cm],
-                [9132.5*cm - 0.3*cm, 9134.5*cm + 0.3*cm],
-                [9215.1*cm - 0.3*cm, 9217.1*cm + 0.3*cm],
-                [9297.7*cm - 0.3*cm, 9299.7*cm + 0.3*cm],
-                [9380.3*cm - 0.3*cm, 9382.3*cm + 0.3*cm],
-                [9462.9*cm - 0.3*cm, 9464.9*cm + 0.3*cm],
-                [9545.5*cm - 0.3*cm, 9547.5*cm + 0.3*cm]]
+    LayerYLims= [[6547.0,6547.0+scintillator_height_all],
+                 [6629.6,6629.6+scintillator_height_all],
+                 [8547.0,8547.0+scintillator_height_all],
+                 [8629.6,8629.6+scintillator_height_all],
+                 [9132.2,9132.2+scintillator_height_all],
+                 [9214.8,9214.8+scintillator_height_all],
+                 [9297.4,9297.4+scintillator_height_all],
+                 [9380.0,9380.0+scintillator_height_all],
+                 [9462.6,9462.6+scintillator_height_all],
+                 [9545.2,9545.2+scintillator_height_all]]
     
     y_floor = LayerYLims[2][1]
     z_wall = BoxLimits[2][0] + 3 # [cm] add 3 cm to account for wall width

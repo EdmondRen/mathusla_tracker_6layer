@@ -350,6 +350,13 @@ def BayesDivide(n_pass, n_total, n_pass_err=None, n_total_err=None):
         n_pass_err = np.sqrt(n_pass)
         n_total_err = np.sqrt(n_total)
     
+    # If the denominator is 0, make it non-zero and set the numerator to 0.
+    n_pass = np.array(n_pass)
+    n_total = np.array(n_total)
+    mask = n_total==0
+    n_pass[mask]=0
+    n_total[mask]=1
+    
     gdiv = ROOT.TGraphAsymmErrors()
     h1 = thist([0], bins=len(n_pass), range=(0,100)) # pass
     h0 = thist([0], bins=len(n_pass), range=(0,100)) # total
