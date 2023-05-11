@@ -435,7 +435,8 @@ def plot_truth(event, fig=None, disp_det_view=True, disp_vertex=True, disp_first
             z.append(coord_det[2])
         
         # If-else to avoid duplicating lables
-        if track.LabelString() not in existing_labels:
+        # if track.LabelString() not in existing_labels:
+        if 1:
             axs[0].plot(x, z, color=track.color(),marker=".",linewidth=1,markersize=4,label=track.LabelString())
             axs[1].plot(y, z, color=track.color(),marker=".",linewidth=1,markersize=4,label=track.LabelString())
             axs[2].plot(x, y, color=track.color(),marker=".",linewidth=1,markersize=4,label=track.LabelString())
