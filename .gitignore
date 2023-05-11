@@ -12,3 +12,5 @@ plots/
 # core dump
 *$.core
 **/[Cc]ore*
+
+scripts/data
