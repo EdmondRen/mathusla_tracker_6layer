@@ -12,7 +12,7 @@ from matplotlib import collections, colors, transforms
 
 
 from detector import Detector
-import physics,cutflow,util, detector
+import physics,cutflow,util, detector, event
 
 
 
@@ -407,7 +407,7 @@ def drawdet_xy(use_cms=False, axis=None, layer_height_vis=0.2, alpha=0.1):
 
 cut=cutflow.sample_space("")
 
-def plot_truth(event, fig=None, disp_det_view=True, disp_vertex=True, disp_first_hit=False):
+def plot_truth(event, fig=None, disp_det_view=True, disp_vertex=True, disp_first_hit=False, make_legend=True):
     """
     Function to plot the truth of one event
     Tom Ren, 2023.2
@@ -483,7 +483,8 @@ def plot_truth(event, fig=None, disp_det_view=True, disp_vertex=True, disp_first
     axs[2].set_ylabel("y [m]")
     # Put legend in the last grid
     handles, labels = axs[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc=(0.52,0.05))
+    if make_legend:
+        fig.legend(handles, labels, loc=(0.52,0.05))
     axs[3].axis("off")
     fig.tight_layout()
     return fig
@@ -678,4 +679,45 @@ def plot_recon(event, fig=None, disp_det_view=False, disp_non_vertex_tracks=True
     axs[3].axis("off")
     fig.tight_layout()
     return fig    
+
+
+def plot_multiple_events(filename, tree_name, nevents=300):
+    ev = event.Event(filename, 0, tree_name=tree_name)
+
+    fig,axs=plt.subplots(2,2,figsize=(12,9))
+    axs=axs.flatten().tolist()
+    for i in range(nevents):
+        ev.EventNumber=i
+        tracks=ev.get_truthtrack()
+
+        if len(tracks)>0:
+            for track in tracks:
+                track=util.coord_cms2det(track)
+                # plt.plot(track[0],track[2],marker=".",color="grey",alpha=0.1)
+                plt.sca(axs[0])
+                plt.plot(track[0],track[2],marker=".",color="C1",alpha=0.1,markersize=1)    
+                plt.sca(axs[1])
+                plt.plot(track[1],track[2],marker=".",color="C1",alpha=0.1,markersize=1)    
+                plt.sca(axs[2])
+                plt.plot(track[0],track[1],marker=".",color="C1",alpha=0.1,markersize=1)                
+
+    plt.sca(axs[0])
+    plt.xlabel('x [m]')
+    plt.ylabel('z [m]')
+    # ylim(bottom=0)
+    drawdet_xz()
+
+    plt.sca(axs[1])
+    plt.xlabel('y [m]')
+    plt.ylabel('z [m]')
+    # ylim(bottom=0)
+    drawdet_xz()    
+
+    plt.sca(axs[2])
+    plt.xlabel('x [m]')
+    plt.ylabel('y [m]')
+    drawdet_xy()  
+    
+    axs[3].axis("off")
+    
     

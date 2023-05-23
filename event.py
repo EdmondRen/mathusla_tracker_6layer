@@ -68,18 +68,18 @@ class Event:
         excluded_pdgs = set([]) # PDG particles to exclude
 
         for hitn in range(int(self.Tree.NumHits)):
-            if self.Tree.Hit_particleEnergy[hitn] > self.TRUTH_PARTICLE_E_THRESHOLD:
-                particleSet.add( physics.Particle( int(self.Tree.Hit_G4TrackId[hitn]), int(self.Tree.Hit_particlePdgId[hitn]), int(self.Tree.Hit_G4ParentTrackId[hitn]) ))
+            if self.Tree.Hit_particleEnergy.at(hitn) > self.TRUTH_PARTICLE_E_THRESHOLD:
+                particleSet.add( physics.Particle( int(self.Tree.Hit_G4TrackId.at(hitn)), int(self.Tree.Hit_particlePdgId.at(hitn)), int(self.Tree.Hit_G4ParentTrackId.at(hitn)) ))
 
         for particle in particleSet:
             if not particle.pdgID in excluded_pdgs:
                 currentTrack = physics.Track(particle)
                 for hitn in range(int(self.Tree.NumHits)):
-                    if ( int(self.Tree.Hit_G4TrackId[hitn]) == particle.trackID):
-                        time = self.Tree.Hit_time[hitn]
-                        location = physics.Vector(self.Tree.Hit_x[hitn], self.Tree.Hit_y[hitn], self.Tree.Hit_z[hitn])
-                        energy = self.Tree.Hit_particleEnergy[hitn]
-                        momentum = physics.Vector( self.Tree.Hit_particlePx[hitn], self.Tree.Hit_particlePy[hitn], self.Tree.Hit_particlePz[hitn] )
+                    if ( int(self.Tree.Hit_G4TrackId.at(hitn)) == particle.trackID):
+                        time = self.Tree.Hit_time.at(hitn)
+                        location = physics.Vector(self.Tree.Hit_x.at(hitn), self.Tree.Hit_y.at(hitn), self.Tree.Hit_z.at(hitn))
+                        energy = self.Tree.Hit_particleEnergy.at(hitn)
+                        momentum = physics.Vector( self.Tree.Hit_particlePx.at(hitn), self.Tree.Hit_particlePy.at(hitn), self.Tree.Hit_particlePz.at(hitn) )
                         point = physics.TrackPoint(time, location, energy, momentum)
                         currentTrack.AddPoint(point)
 
@@ -96,6 +96,43 @@ class Event:
         self.truthTrackList.sort()
 #        self.t0 = min([track.pointList[0].time for track in self.truthTrackList])
 #        self.tm = max([track.pointList[len(track.pointList)-1].time for track in self.truthTrackList])
+
+    def ExtractTruthPhysics_list(self):
+
+        self.Tree.GetEntry(self.EventNumber)
+        self.truthTrackList_list=[]
+        particleSet = set()
+
+        track_ids = np.array(util.c2list(self.Tree.Hit_G4TrackId))
+        hits_x = np.array(util.c2list(self.Tree.Hit_x))
+        hits_y = np.array(util.c2list(self.Tree.Hit_y))
+        hits_z = np.array(util.c2list(self.Tree.Hit_z))
+        hits_t = np.array(util.c2list(self.Tree.Hit_time))
+        hits_pid = np.array(util.c2list(self.Tree.Hit_particlePdgId))
+        hits_energy = np.array(util.c2list(self.Tree.Hit_particleEnergy))
+
+        track_ids_unique = np.unique(track_ids)
+        hit_inds = np.arange(len(track_ids))
+
+        for trackid in track_ids_unique:
+            hit_inds_track = hit_inds[track_ids==trackid]
+
+            # each hit is a list of [x, y, z, t, pid, energy]
+            currentTrack = [hits_x[hit_inds_track].tolist(),hits_y[hit_inds_track].tolist(),hits_z[hit_inds_track].tolist(),hits_t[hit_inds_track].tolist(),hits_pid[hit_inds_track].tolist(),hits_energy[hit_inds_track].tolist(),track_ids[hit_inds_track]]
+
+            # Require >2 hits
+            if (len(currentTrack[0])) <= 2:
+                continue
+
+            # Require time range
+            if currentTrack[3][-1]-currentTrack[3][0] < self.timeRangeCut:
+                continue
+
+            # sort hits by time
+            current_track_sort  = util.sortbyrow(np.array(currentTrack), 3) 
+            self.truthTrackList_list.append(current_track_sort)
+
+        return self.truthTrackList_list
    
     def Print(self):
 
@@ -1559,3 +1596,32 @@ class Event:
                 t.append(point.time)
             tracks.append(np.array([x,y,z,t]))
         return tracks
+    
+    
+    def get_hits_truth(self, event=None, keys_truth = ['Hit_energy', 'Hit_time', 'Hit_detId', 'Hit_particlePdgId', 'Hit_G4TrackId', 'Hit_G4ParentTrackId', 'Hit_x', 'Hit_y', 'Hit_z', 'Hit_particleEnergy', 'Hit_particlePx', 'Hit_particlePy', 'Hit_particlePz']):
+        import numpy as np
+        if event is None:
+            event=self
+        Tree = event.Tree
+        Tree.GetEntry(event.EventNumber)
+
+        n_hits = len(Tree.Hit_x)
+        hits={}
+        scope = locals()
+        for key in keys_truth:
+            exec(f'hits["{key}"]=np.array([Tree.{key}[i] for i in range(n_hits)])', scope)
+        return hits   
+
+    def get_hits_digi(self, event=None, keys_truth = ['Digi_time', 'Digi_x', 'Digi_y', 'Digi_z', 'Digi_energy', 'Digi_px', 'Digi_py', 'Digi_pz', 'Digi_particle_energy', 'Digi_pdg_id']):
+        import numpy as np
+        if event is None:
+            event=self
+        Tree = event.Tree
+        Tree.GetEntry(event.EventNumber)
+
+        n_hits = len(Tree.Digi_x)
+        hits={}
+        scope = locals()
+        for key in keys_truth:
+            exec(f'hits["{key}"]=np.array([Tree.{key}[i] for i in range(n_hits)])', scope)
+        return hits    

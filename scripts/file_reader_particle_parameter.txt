@@ -1,5 +1,5 @@
 # Format (by column):
-# KEEP the following line to describe total number of hits:
+# UPATE the following line to describe total number of hits:
 # nevents 2
 
 # PDG ID of generated particle

@@ -117,7 +117,7 @@ def twobody_decay_MA(mass, abs_momentum, vertex_xyz, decayproduct_pid=[13,13], r
         float, mass of the primary particle [MeV]
     abs_momentum: 
         float, absolute momentum of the primary partile [MeV]
-    vertex_xyz:
+    vertex_xyz: in uni of [cm]
         [x,y,z] in **CMS** coordinates! It's the same coordinates as the HIT_x,y,z in simulation output.
     decayproduct_pid:
         [pid1, pid2], PID of the two decay products. Used to decide the mass of the decay particle.
@@ -146,7 +146,7 @@ def multibody_decay_MA(mass, abs_momentum, vertex_xyz, decayproduct_p4vec_list):
     p4vec_transformed=np.array([frame_transform(particle, boost_direction, gamma=boost_gamma) for particle in decayproduct_p4vec_list])
     return p4vec_transformed 
 
-def generate_twobody_decay_file(filename, mass, abs_momentum, vertex_xyz, decayproduct_pid=[13,13], rand_seed=None, Nevents=10000, OVER_WRITE=False):
+def generate_twobody_decay_file(filename, mass, abs_momentum, vertex_xyz, decayproduct_pid=[13,13], rand_seed=None, Nevents=10000, OVER_WRITE=False, which_coordinate = "CMS"):
     """
     INPUT
     ---
@@ -156,12 +156,15 @@ def generate_twobody_decay_file(filename, mass, abs_momentum, vertex_xyz, decayp
         float, mass of the primary particle [MeV]
     abs_momentum: 
         float, absolute momentum of the primary partile [MeV]
-    vertex_xyz:
+    vertex_xyz: [x,y,z] or [[x0,x1], [y0,y1], [z0,z1]], in unit of [cm]
         [x,y,z] in **CMS** coordinates! It's the same coordinates as the HIT_x,y,z in simulation output.
+        [[x0,x1], [y0,y1], [z0,z1]]: ranges of xyz, will generate uniform distributed xyz. 
     decayproduct_pid:
         [pid1, pid2], PID of the two decay products. Used to decide the mass of the decay particle.
     rand_seed: 
         If None, then fresh, unpredictable entropy will be pulled from the OS. 
+    which_coordinate:
+        "CMS" or "detector"
     """    
     
     if os.path.exists(filename):
@@ -171,14 +174,102 @@ def generate_twobody_decay_file(filename, mass, abs_momentum, vertex_xyz, decayp
             return
         
     # Transform vertex position to detector coordinate to feed to simulation
-    vertex_xyz_det = np.array([vertex_xyz[2],-vertex_xyz[0],-vertex_xyz[1]+85.47*unit.m])*10 # turn into mm
+    vertex_xyz = np.array(vertex_xyz)
+    if vertex_xyz.ndim==1:
+        if which_coordinate=="CMS":
+            vertex_xyz_det = np.array([vertex_xyz[2],-vertex_xyz[0],-vertex_xyz[1]+85.47*unit.m])*10 # turn into mm
+            vertex_xyz_cms = vertex_xyz*10
+        else:
+            vertex_xyz_det = vertex_xyz*10
+            vertex_xyz_cms = np.array([-vertex_xyz[1],-vertex_xyz[2]+85.47*unit.m,vertex_xyz[0]])*10
         
+    
+    rng = np.random.default_rng(seed=rand_seed)
+    
+    
     with open(filename, "w") as file:
         # first, write the total number of events
-        file.write(f"# nevents {Nevents}\n")
+        file.write(f"# nevents {Nevents}\n\n")
         for i in range(Nevents):
             file.write(f"n {i}\n")
             rand_seed_i = None if rand_seed is None else rand_seed+i
-            p4vec_1,p4vec_2 = twobody_decay_MA(mass, abs_momentum, vertex_xyz, decayproduct_pid=decayproduct_pid, rand_seed=rand_seed_i)
-            file.write(f"    {decayproduct_pid[0]}  {vertex_xyz_det[0]}  {vertex_xyz_det[1]} {vertex_xyz_det[2]} {p4vec_1[0]} {p4vec_1[1]} {-p4vec_1[2]}\n")
-            file.write(f"    {decayproduct_pid[0]}  {vertex_xyz_det[0]}  {vertex_xyz_det[1]} {vertex_xyz_det[2]} {p4vec_2[0]} {p4vec_2[1]} {-p4vec_2[2]}\n")
+            
+            # Generate a random vertex if a range was given
+            if vertex_xyz.ndim==2:
+                vertex_temp = np.array([rng.uniform(*vertex_xyz[0]), rng.uniform(*vertex_xyz[1]), rng.uniform(*vertex_xyz[2])])
+                if which_coordinate=="CMS":
+                    # Convert to dtector coordinate and # turn into mm
+                    vertex_xyz_det = np.array([vertex_temp[2],-vertex_temp[0],-vertex_temp[1]+85.47*unit.m])*10 
+                    vertex_xyz_cms = vertex_temp*10
+                    
+                else:
+                    vertex_xyz_det = vertex_temp*10
+                    vertex_xyz_cms = np.array([-vertex_temp[1],-vertex_temp[2]+85.47*unit.m,vertex_temp[0]])*10
+                    
+
+            p4vec_1,p4vec_2 = twobody_decay_MA(mass, abs_momentum, vertex_xyz_cms, decayproduct_pid=decayproduct_pid, rand_seed=rand_seed_i)
+            file.write(f"\t {decayproduct_pid[0]}\t  {vertex_xyz_det[0]}\t  {vertex_xyz_det[1]}\t {vertex_xyz_det[2]}\t {p4vec_1[0]}\t {p4vec_1[1]}\t {-p4vec_1[2]}\n")
+            file.write(f"\t {decayproduct_pid[0]}\t  {vertex_xyz_det[0]}\t  {vertex_xyz_det[1]}\t {vertex_xyz_det[2]}\t {p4vec_2[0]}\t {p4vec_2[1]}\t {-p4vec_2[2]}\n")
+            
+            
+            
+            
+def generate_twobody_vertex_range(filename, abs_momentum, vertex_xyz, theta_range, p_unit_pre=[1,1,-1], phi_range=[0,2*np.pi], decayproduct_pid=[13,13], rand_seed=None, Nevents=10000, OVER_WRITE=False):
+    """
+    INPUT
+    ---
+    filename:
+        str, the filename of the event description file to be generated
+    abs_momentum: 
+        float, absolute momentum of the two particles [MeV]
+    vertex_xyz: [x,y,z] or [[x0,x1], [y0,y1], [z0,z1]], in unit of [cm]
+        [x,y,z] in **DETECTOR** coordinates! It's the same coordinates as the x,y,z of the 'Range' generator in simulation output.
+        [[x0,x1], [y0,y1], [z0,z1]]: ranges of xyz, will generate uniform distributed xyz. 
+    theta_range:
+        [theta_low, theta_high]
+    decayproduct_pid:
+        [pid1, pid2], PID of the two decay products. Used to decide the mass of the decay particle.
+    rand_seed: 
+        If None, then fresh, unpredictable entropy will be pulled from the OS. 
+    which_coordinate:
+        "CMS" or "detector"
+    """    
+    
+    if os.path.exists(filename):
+        print("File exists!")
+        if not OVER_WRITE:
+            print("Please change filename, or set OVER_WRITE=True")
+            return
+        
+    # Transform vertex position to detector coordinate to feed to simulation
+    vertex_xyz = np.array(vertex_xyz)
+    vertex_xyz_det = vertex_xyz*10
+        
+    rng = np.random.default_rng(seed=rand_seed)
+    with open(filename, "w") as file:
+        # first, write the total number of events
+        file.write(f"# nevents {Nevents}\n\n")
+        for i in range(Nevents):
+            file.write(f"n {i}\n")
+            rand_seed_i = None if rand_seed is None else rand_seed+i
+            
+            pvecs=[]
+            for ivec in range(2):
+                theta = rng.uniform(*theta_range)
+                phi = rng.uniform(*phi_range)
+                p_unit=np.array([np.sin(theta)*np.cos(phi), np.sin(theta)*np.sin(phi), -np.cos(theta)])
+                p_unit=p_unit/np.sqrt(np.sum(p_unit**2))*p_unit_pre
+                p = abs_momentum*p_unit         
+                pvecs.append(p)
+            
+            # Generate a random vertex if a range was given
+            if vertex_xyz.ndim==2:
+                vertex_temp = np.array([rng.uniform(*vertex_xyz[0]), rng.uniform(*vertex_xyz[1]), rng.uniform(*vertex_xyz[2])])
+                vertex_xyz_det = vertex_temp*10
+                    
+
+            file.write(f"\t {decayproduct_pid[0]}\t  {vertex_xyz_det[0]}\t  {vertex_xyz_det[1]}\t {vertex_xyz_det[2]}\t {pvecs[0][0]}\t {pvecs[0][1]}\t {-pvecs[0][2]}\n")
+            file.write(f"\t {decayproduct_pid[0]}\t  {vertex_xyz_det[0]}\t  {vertex_xyz_det[1]}\t {vertex_xyz_det[2]}\t {pvecs[1][0]}\t {pvecs[1][1]}\t {-pvecs[1][2]}\n")            
+            
+            
+            

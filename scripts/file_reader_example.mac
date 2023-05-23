@@ -9,7 +9,7 @@
 # Each row corresponds to one particle.
 # Each event consists of multiple rows separated with a line starting with "n"
 
-/gen/file_reader/pathname /project/def-mdiamond/tomren/jupyter/tracker_6layers/scripts/particle_parameters.tsv
+/gen/file_reader/pathname /project/def-mdiamond/tomren/jupyter/tracker_6layers/scripts/particle_parameters.txt
 
 # The number of events here must be equal to the number of particles in the file.
 /run/beamOn 2

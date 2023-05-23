@@ -70,6 +70,13 @@ def unzip(concatlist, divider=-1):
             lists[n].append(val)
     return lists
 
+def appcut(data, mask):
+    data_cut=[]
+    for i in range(len(mask)):
+        if mask[i]:
+            data_cut.append(data[i])
+    return data_cut
+
 
 steel_height=0.03 #m
 Box_IP_Depth=85.47#m
@@ -119,6 +126,17 @@ def coord_cms2det(vector_xyz):
 def theta2eta(theta):
     return -np.log(np.tan(theta/2))
 
+
+def quadsum(data):
+    return np.sqrt(np.sum(np.power(data,2)))
+
+def c2list(cvector):
+    return [cvector.at(i) for i in range(cvector.size())]
+
+def sortbyrow(a, irow):
+    return a[:,a[irow, :].argsort()]
+def sortbycol(a, icol):
+    return a[a[:, icol].argsort()]
 
 
 class Utils:
