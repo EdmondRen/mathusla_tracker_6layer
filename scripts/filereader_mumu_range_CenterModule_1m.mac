@@ -1,0 +1,4 @@
+/det/select Box 
+/gen/select file_reader 
+/gen/file_reader/pathname /project/6035200/tomren/jupyter/tracker_6layers/scripts/filereader_mumu_range_CenterModule_1m.txt 
+/run/beamOn 10000 

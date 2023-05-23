@@ -1,0 +1,4 @@
+/det/select Box 
+/gen/select file_reader 
+/gen/file_reader/pathname /project/def-mdiamond/tomren/jupyter/tracker_6layers/scripts/muon_cms.txt 
+/run/beamOn 160000 

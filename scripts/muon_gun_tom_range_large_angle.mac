@@ -1,0 +1,30 @@
+# Center the gun 1cm below the center of the middle module in the full detector
+# phi: arctan(44.5/8)
+# eta: eta = -ln (tan (theta/2)), theta  = 0.5pi-arctan(44.5/8) //44.5: 4+half module, 8:1+5+1+1
+# Run this script: simulation -o /project/def-mdiamond/tomren/mathusla/data/fit_study_6layer/muon_1000_GeV_large_angle/ -s muon_gun_tom_range_large_angle.mac energy 1000 count 40000
+
+/det/select Box
+
+/vis/filtering/trajectories/create/chargeFilter
+/vis/filtering/trajectories/chargeFilter-0/add 0
+/vis/filtering/trajectories/chargeFilter-0/invert true
+/vis/filtering/trajectories/chargeFilter-0/verbose false
+/vis/filtering/trajectories/chargeFilter-0/active true
+
+/vis/ogl/set/displayListLimit 1000000
+
+/gen/select range
+
+/gen/range/id 13
+/gen/range/t0 0 ns
+/gen/range/vertex 124.5 5 1 m
+/gen/range/p_unit 0 0 -1
+
+/gen/range/phi_min -1.39292 rad 
+/gen/range/phi_max  1.39292 rad
+/gen/range/eta_min -2.41717
+/gen/range/eta_max  2.41717
+
+/gen/range/p_mag {energy} GeV/c
+
+/run/beamOn {count}
