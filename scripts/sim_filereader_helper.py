@@ -6,36 +6,6 @@ class unit:
     m=100
     cm=1
     
-def generate_sim_script_filereader(events_properties_filename, script_path=None):
-    if script_path is None:
-        script_path = os.path.splitext(events_properties_filename)[0]+".mac"
-        
-    with open(events_properties_filename, 'r') as file:
-        nlines_read=0
-        found_nevents=False
-        while (not found_nevents) and nlines_read<=10:
-            line_content = file.readline().split()
-            nlines_read+=1
-            if "nevents" in line_content:
-                try:
-                    nevents = int(line_content[-1])
-                    found_nevents = True
-                    break
-                except:
-                    print("Could not read number of events")
-            
-
-    script = "/det/select Box \n"
-    script+= "/gen/select file_reader \n"
-    script+= f"/gen/file_reader/pathname {events_properties_filename}\n"
-    script+= f"/run/beamOn {nevents}"
-
-    with open(script_path, 'w') as file:
-        file.write(script)
-        
-    print("Script saved at", script_path)
-    
-    return script_path
 
 def frame_transform(four_vector_in, boost_direction, beta=None, gamma=None):
     """
@@ -146,6 +116,40 @@ def multibody_decay_MA(mass, abs_momentum, vertex_xyz, decayproduct_p4vec_list):
     p4vec_transformed=np.array([frame_transform(particle, boost_direction, gamma=boost_gamma) for particle in decayproduct_p4vec_list])
     return p4vec_transformed 
 
+def generate_sim_script_filereader(events_properties_filename, script_path=None):
+    """
+    Create simulation script for filereader generator based on the events database file.
+    """
+    if script_path is None:
+        script_path = os.path.splitext(events_properties_filename)[0]+".mac"
+        
+    with open(events_properties_filename, 'r') as file:
+        nlines_read=0
+        found_nevents=False
+        while (not found_nevents) and nlines_read<=10:
+            line_content = file.readline().split()
+            nlines_read+=1
+            if "nevents" in line_content:
+                try:
+                    nevents = int(line_content[-1])
+                    found_nevents = True
+                    break
+                except:
+                    print("Could not read number of events")
+            
+
+    script = "/det/select Box \n"
+    script+= "/gen/select file_reader \n"
+    script+= f"/gen/file_reader/pathname {events_properties_filename}\n"
+    script+= f"/run/beamOn {nevents}"
+
+    with open(script_path, 'w') as file:
+        file.write(script)
+        
+    print("Script saved at", script_path)
+    
+    return script_path
+
 def generate_twobody_decay_file(filename, mass, abs_momentum, vertex_xyz, decayproduct_pid=[13,13], rand_seed=None, Nevents=10000, OVER_WRITE=False, which_coordinate = "CMS"):
     """
     INPUT
@@ -189,9 +193,15 @@ def generate_twobody_decay_file(filename, mass, abs_momentum, vertex_xyz, decayp
     
     with open(filename, "w") as file:
         # first, write the total number of events
+        primary_particle_PID = -1
+        r = np.sqrt(np.sum(np.power(vertex_xyz_cms,2)))
+        primary_particle_px = abs_momentum/r*vertex_xyz_cms[0]
+        primary_particle_py = abs_momentum/r*vertex_xyz_cms[1]
+        primary_particle_pz = abs_momentum/r*vertex_xyz_cms[2]     
+        
         file.write(f"# nevents {Nevents}\n\n")
         for i in range(Nevents):
-            file.write(f"n {i}\n")
+            file.write(f"n {i}  \t {primary_particle_PID}\t  {vertex_xyz_det[0]}\t  {vertex_xyz_det[1]}\t {vertex_xyz_det[2]}\t {primary_particle_px}\t {primary_particle_py}\t {primary_particle_pz}\n")
             rand_seed_i = None if rand_seed is None else rand_seed+i
             
             # Generate a random vertex if a range was given
@@ -244,13 +254,23 @@ def generate_twobody_vertex_range(filename, abs_momentum, vertex_xyz, theta_rang
     # Transform vertex position to detector coordinate to feed to simulation
     vertex_xyz = np.array(vertex_xyz)
     vertex_xyz_det = vertex_xyz*10
+    vertex_xyz_cms = np.array([-vertex_xyz[1],-vertex_xyz[2]+85.47*unit.m,vertex_xyz[0]])*10
         
     rng = np.random.default_rng(seed=rand_seed)
     with open(filename, "w") as file:
         # first, write the total number of events
         file.write(f"# nevents {Nevents}\n\n")
+        
+        primary_particle_PID = -1
+        r = np.sqrt(np.sum(np.power(vertex_xyz_cms,2)))
+        primary_particle_px = abs_momentum/r*vertex_xyz_cms[0]
+        primary_particle_py = abs_momentum/r*vertex_xyz_cms[1]
+        primary_particle_pz = abs_momentum/r*vertex_xyz_cms[2]     
+        
+        
         for i in range(Nevents):
-            file.write(f"n {i}\n")
+            file.write(f"n {i}  \t {primary_particle_PID}\t  {vertex_xyz_det[0]}\t  {vertex_xyz_det[1]}\t {vertex_xyz_det[2]}\t {primary_particle_px}\t {primary_particle_py}\t {primary_particle_pz}\n")
+            
             rand_seed_i = None if rand_seed is None else rand_seed+i
             
             pvecs=[]

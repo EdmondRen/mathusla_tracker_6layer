@@ -143,13 +143,46 @@ def get_info(h):
 import ROOT
 import array
 import root_numpy
-def fit_tg(x,y, xerr=None, yerr=None, function="gaus",option="QS",n0=None, fix=None,
+def fit_tg(x,y, xerr=None, yerr=None, function="gaus",option="QS", fit_range=None, initial_values=None, bounds=None,
+            set_constant=None,
          poisson_yerr=True):
     
     """
+    2-D fit using TGraphErrors, support uncertainty on both x and y
+    
+
+    INPUT
+    ---
+    x,y: 
+        x and y coordinate
+    xerr,yerr:
+        uncertainty on x and y. if not specified, xerr=0, yerr=sqrt(y)
+    function:
+        string. Follow the same convention of ROOT TF1
+        
+    option:
+        string, same as the option of  ROOT::TGraph::Fit. 
+        "Q": quiet
+        "S":The full result of the fit is returned in the TFitResultPtr. This is needed to get the covariance matrix of the fit. 
+        "W":Ignore all point errors when fitting a TGraphErrors or TGraphAsymmErrors
+        "R" (Range):Fit using a fitting range specified in the function range with TF1::SetRange.
+        "B" (Bound):Use this option when you want to fix one or more parameters and the fitting function is a predefined one (e.g gaus, expo,..), otherwise in case of pre-defined functions, some default initial values and limits are set.
+    
+    fit_range:
+        [fit_start, fit_end]
+        
+    initial_values:
+        [a0, b0, c0,...], initial value of all the parameters in a list
+    bounds:
+        [[i_par, par1_lower, par1_upper], ...]
+    set_constant:
+        [[i_par1, par1_value],[i_par2, par2_value], ...]  
+        
+        
+    ---    
     f1 = ROOT.TF1("pol6_2","pol6")
-    f1.SetParameters(*pol6_init_pars)
-    f1.FixParameter(0,0)
+    f1.SetParameters(*initial_values)
+    f1.FixParameter(0,0)        
     """
     
     n=len(x)
@@ -177,8 +210,25 @@ def fit_tg(x,y, xerr=None, yerr=None, function="gaus",option="QS",n0=None, fix=N
     y=array.array("d",y)
     
     g1 = ROOT.TGraphAsymmErrors(n,x,y,exl,exh,eyl,eyh);
+    
+    # Set initial condition to the function
+    func=ROOT.TF1("f1",function)
+    if fit_range is not None:
+        func=ROOT.TF1("f1",function, *fit_range)
+        option = option + "R" if "R" not in option else option
+    if set_constant is not None:
+        for i_fix in set_constant:
+            func.FixParameter(i_fix[0], i_fix[1]);
+        option = option + "B" if "B" not in option else option            
+    if initial_values is not None:
+        func.SetParameters(*initial_values);
+        option = option + "B" if "B" not in option else option            
+    if bounds is not None:
+        for i_bound in bounds:
+            func.SetParLimits(*i_bound);
+        option = option + "B" if "B" not in option else option            
 
-    fit_res=g1.Fit(function,option)
+    fit_res=g1.Fit("f1",option)
     pcov=root_numpy.matrix(fit_res.GetCovarianceMatrix())
     popt = [fit_res.GetParams()[i] for i in range(len(pcov))]
     

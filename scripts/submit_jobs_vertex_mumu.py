@@ -34,6 +34,7 @@ def main():
     EventCount=160000
     TrackerRuns=1
     Scripts= ['filereader_muon_M4000_P40000_N10000.mac','filereader_mumu_range_CenterModule.mac','filereader_mumu_range_CenterModule_1m.mac']
+    Scripts= ['filereader_muon_M4000_P40000_N10000.mac','filereader_mumu_range_CenterModule.mac']#,'filereader_mumu_range_CenterModule_1m.mac']
     Names = ["muon"]
     CORES = 1
     
@@ -45,12 +46,12 @@ def main():
     
     for ijob in range(len(Scripts)):
         sim_script = Scripts[ijob]
-        # if ijob==0:
-        #     data_dir_sub = f"{DataDir}/XtoMuMu_M4GeV_P40GeV/"
-        # elif ijob==1:
-        #     data_dir_sub = f"{DataDir}/XtoMuMu_P10GeV_manual/"
-        # elif ijob==2:
-        if ijob==2:
+        if ijob==0:
+            data_dir_sub = f"{DataDir}/XtoMuMu_M4GeV_P40GeV/"
+        elif ijob==1:
+            data_dir_sub = f"{DataDir}/XtoMuMu_P10GeV_manual/"
+        elif ijob==2:
+        # if ijob==2:
             data_dir_sub = f"{DataDir}/XtoMuMu_P10GeV_manual_1m/"            
         else:
             continue

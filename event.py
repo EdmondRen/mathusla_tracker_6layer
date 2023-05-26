@@ -98,6 +98,11 @@ class Event:
 #        self.tm = max([track.pointList[len(track.pointList)-1].time for track in self.truthTrackList])
 
     def ExtractTruthPhysics_list(self):
+        
+        """
+        Return a list of
+        [x,y,z,t, PID, Energy, TRACK_ID]
+        """
 
         self.Tree.GetEntry(self.EventNumber)
         self.truthTrackList_list=[]
