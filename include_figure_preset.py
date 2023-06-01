@@ -138,7 +138,7 @@ def plt_config(family="serif",usetex=False,math_fontfamily=None, fontsize_multi=
 class Save_fig:
     def __init__(self,fig_prefix=None, exts="pdf,png",dpi=100,SAVE=True):
         self.fig_prefix = fig_prefix
-        Path(fig_prefix).mkdir(exist_ok=True)
+        Path(os.path.dirname(fig_prefix)).mkdir(exist_ok=True)
         self.exts = exts
         self.dpi = dpi
         self.SAVE = SAVE
