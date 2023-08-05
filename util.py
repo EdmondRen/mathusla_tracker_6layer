@@ -39,6 +39,10 @@ import h5py
 import ROOT as root
 from root_numpy import array2tree
 
+def most_frequent(nums):
+    
+    """Get the most frequent element in a list"""
+    return max(set(nums), key = nums.count) 
 
 
 def GetFilesInDir(base_dir, postfix=".root"):

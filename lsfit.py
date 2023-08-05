@@ -223,7 +223,8 @@ def get_km(filename, results_fit = None, tree_name="integral_tree", nevents=-1):
                 for track_ind in range(len(track_digi_hit_inds)):
                     recon_i = [Tree.Track_k_m_z0[track_ind], Tree.Track_k_m_x0[track_ind], Tree.Track_k_m_y0[track_ind], Tree.Track_k_m_t0[track_ind],Tree.Track_k_m_velZ[track_ind], Tree.Track_k_m_velX[track_ind], Tree.Track_k_m_velY[track_ind]]
                     recon_i_unc = [Tree.Track_k_m_ErrorZ0[track_ind], Tree.Track_k_m_ErrorX0[track_ind], Tree.Track_k_m_ErrorY0[track_ind], Tree.Track_k_m_ErrorT0[track_ind],Tree.Track_k_m_ErrorVz[track_ind], Tree.Track_k_m_ErrorVx[track_ind], Tree.Track_k_m_ErrorVy[track_ind]]
-                    chi2 = util.chi2_calc(recon_i,truth,recon_i_unc)
+                    # chi2 = util.chi2_calc(recon_i,truth,recon_i_unc)
+                    chi2 = np.linalg.norm(np.array(recon_i)[:4]-np.array(truth)[:4])
                     track_chi2s.append(chi2)
                 #     print("s")
                 #     print(track_chi2s)

@@ -10,7 +10,7 @@ def main():
     parser.add_argument('--verbose', action='store_true', help='Show the slurm script content')
     parser.add_argument('--hours', type=int, default=6, help='Requested time in hours per job')
     parser.add_argument('--system', type=str, default='slurm', help='batch system, {slurm, lsf}')
-    parser.add_argument('--slurm_account', type=str, default='def-mdiamond', help='Slurm system account')
+    parser.add_argument('--slurm_account', type=str, default='rrg-mdiamond', help='Slurm system account')
     parser.add_argument('--slurm_partition', type=str, default='', help='Slurm system partition')
     
     args = parser.parse_args()
@@ -29,6 +29,7 @@ def main():
 
     simulation='/project/def-mdiamond/tomren/mathusla/Mu-Simulation/simulation '
     tracker='/project/def-mdiamond/tomren/mathusla/MATHUSLA-Kalman-Algorithm/tracker/build/tracker '
+    tracker_noscatter='/project/def-mdiamond/tomren/mathusla/MATHUSLA-Kalman-Algorithm_noscatter/tracker/build/tracker '
 
     EnergyList=[[0.1, 0.2, 0.5, 1, 3, 10, 30, 100], [0.1, 0.2, 0.5, 1, 3, 10, 30, 100], [0.1, 0.2, 0.5, 1, 3, 10, 30, 100]]
     EventCount=40000
@@ -44,18 +45,21 @@ def main():
     for i, sim_script in enumerate(Scripts):
         for energy in EnergyList[i]:
             job_script=f"""mkdir -p {DataDir}/{Names[i]}_{energy}_GeV 
-{simulation} -j1 -q  -o {DataDir}/{Names[i]}_{energy}_GeV  -s {sim_script} energy {energy} count {EventCount}  
+# {simulation} -j1 -q  -o {DataDir}/{Names[i]}_{energy}_GeV  -s {sim_script} energy {energy} count {EventCount}  
 for f in {DataDir}/{Names[i]}_{energy}_GeV/*/*/run*.root; do 
     {tracker} $f `dirname $f` 
     mv `dirname $f`/stat0.root `dirname $f`/stat_seedmod.root -f 
+    
+    {tracker_noscatter} $f `dirname $f` 
+    mv `dirname $f`/stat0.root `dirname $f`/stat_noscatter.root -f     
 done 
 """
-            if i==0:
-                continue
+#             if i==0:
+#                 continue
                 
             # Run longer time for pions at 10 GeV and above.
             if (i in [1,2]) and energy >3:
-                hours_mod = 15
+                hours_mod = 4
             else:
                 # continue
                 hours_mod = hours

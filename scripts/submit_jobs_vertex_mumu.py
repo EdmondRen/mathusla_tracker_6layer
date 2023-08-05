@@ -29,12 +29,17 @@ def main():
 
     simulation='/project/def-mdiamond/tomren/mathusla/Mu-Simulation/simulation '
     tracker='/project/def-mdiamond/tomren/mathusla/MATHUSLA-Kalman-Algorithm/tracker/build/tracker '
+    tracker2="/home/tomren/mathusla/MATHUSLA-Kalman-Algorithm_debug/tracker/build/tracker"
+    tracker3="/home/tomren/mathusla/MATHUSLA-Kalman-Algorithm_vertexinitial/tracker/build/tracker"
+     
 
     EnergyList=[[100]]
     EventCount=160000
     TrackerRuns=1
-    Scripts= ['filereader_muon_M4000_P40000_N10000.mac','filereader_mumu_range_CenterModule.mac','filereader_mumu_range_CenterModule_1m.mac']
-    Scripts= ['filereader_muon_M4000_P40000_N10000.mac','filereader_mumu_range_CenterModule.mac']#,'filereader_mumu_range_CenterModule_1m.mac']
+    # Scripts= ['filereader_muon_M4000_P40000_N10000.mac','filereader_mumu_range_CenterModule.mac','filereader_mumu_range_CenterModule_1m.mac']
+    Scripts= ['filereader_muon_M4000_P40000_N10000.mac','filereader_muon_M4000_P40000_N10000_1m.mac', 'filereader_muon_M4000_P8000_N10000.mac'] # ,'filereader_mumu_range_CenterModule.mac']#,'filereader_mumu_range_CenterModule_1m.mac']
+    Scripts = ['filereader_muon_M4000_P40000_N10000_side.mac','filereader_muon_M4000_P40000_N10000_side_1m.mac', 'filereader_muon_M4000_P40000_N60000_fullvolume.mac']
+    Scripts = ['filereader_muon_M4000_P40000_N60000_fullvolume.mac']
     Names = ["muon"]
     CORES = 1
     
@@ -46,15 +51,17 @@ def main():
     
     for ijob in range(len(Scripts)):
         sim_script = Scripts[ijob]
-        if ijob==0:
-            data_dir_sub = f"{DataDir}/XtoMuMu_M4GeV_P40GeV/"
-        elif ijob==1:
-            data_dir_sub = f"{DataDir}/XtoMuMu_P10GeV_manual/"
-        elif ijob==2:
-        # if ijob==2:
-            data_dir_sub = f"{DataDir}/XtoMuMu_P10GeV_manual_1m/"            
-        else:
-            continue
+        script_name = sim_script.split(".")[0]
+        data_dir_sub = f"{DataDir}/{script_name}/"
+        # if ijob==0:
+        #     data_dir_sub = f"{DataDir}/XtoMuMu_M4GeV_P40GeV/"
+        # elif ijob==1:
+        #     data_dir_sub = f"{DataDir}/XtoMuMu_P10GeV_manual/"
+        # elif ijob==2:
+        # # if ijob==2:
+        #     data_dir_sub = f"{DataDir}/XtoMuMu_P10GeV_manual_1m/"            
+        # else:
+        #     continue
 
 
 
@@ -63,11 +70,17 @@ def main():
 for f in {data_dir_sub}/*/*/run*.root; do 
     {tracker} $f `dirname $f` 
     mv `dirname $f`/stat0.root `dirname $f`/stat_seedmod.root -f 
+    {tracker2} $f `dirname $f` 
+    mv `dirname $f`/stat0.root `dirname $f`/stat_vertexmod.root -f     
+    {tracker3} $f `dirname $f` 
+    mv `dirname $f`/stat0.root `dirname $f`/stat_vertex_original.root -f     
+    
 done 
 """
+
         # This is the core function to submit job script
         script_prefix=sim_script.split("_")[0]
-        submit_script(job_script, f"{script_prefix}_{energy}_2", blockidx=0, hours=hours_mod, cores=CORES, log_dir=Log_Dir, job_name="reco", system=system, slurm_account=slurm_account, slurm_partition='', debug=DEBUG, verbose=verbose)
+        submit_script(job_script, f"{script_name}_{ijob}", blockidx=0, hours=hours_mod, cores=CORES, log_dir=Log_Dir, job_name="reco", system=system, slurm_account=slurm_account, slurm_partition='', debug=DEBUG, verbose=verbose)
     
     
             

@@ -5,7 +5,7 @@
 Most of the required packages can be loaded with `module`. Dlib is not installed by default. You can either complile it or use the one under my home directory, by appending it to `PATH`.
 ```bash
 $ module load qt/5.15.2 gcc/9.3.0 StdEnv/2020   root/6.26.06  eigen/3.3.7
-$ PATH=$PATH:/home/tomren/home/mathusla/dlib-19.24/install
+$ PATH=$PATH:/project/def-mdiamond/tomren/mathusla/dlib-19.24/install
 ```
 
 

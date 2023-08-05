@@ -75,7 +75,7 @@ def twobody_decay(mass, three_momentum, decayproduct_pid=[13,13], rand_seed=None
     boost_direction = -np.array(three_momentum)
     boost_gamma = np.sqrt(M**2+P**2)/M
     vec1 = frame_transform([E1, p1_x, p1_y, p1_z], boost_direction, gamma=boost_gamma)
-    vec2 = frame_transform([E1, -p1_x, -p1_y, -p1_z], boost_direction, gamma=boost_gamma)
+    vec2 = frame_transform([E2, -p1_x, -p1_y, -p1_z], boost_direction, gamma=boost_gamma)
     
     return vec1, vec2
 
@@ -181,45 +181,54 @@ def generate_twobody_decay_file(filename, mass, abs_momentum, vertex_xyz, decayp
     vertex_xyz = np.array(vertex_xyz)
     if vertex_xyz.ndim==1:
         if which_coordinate=="CMS":
-            vertex_xyz_det = np.array([vertex_xyz[2],-vertex_xyz[0],-vertex_xyz[1]+85.47*unit.m])*10 # turn into mm
+            vertex_xyz_det = np.array([vertex_xyz[2],vertex_xyz[0],-vertex_xyz[1]+85.47*unit.m])*10 # turn into mm
             vertex_xyz_cms = vertex_xyz*10
         else:
             vertex_xyz_det = vertex_xyz*10
-            vertex_xyz_cms = np.array([-vertex_xyz[1],-vertex_xyz[2]+85.47*unit.m,vertex_xyz[0]])*10
+            vertex_xyz_cms = np.array([vertex_xyz[1],-vertex_xyz[2]+85.47*unit.m,vertex_xyz[0]])*10
         
     
     rng = np.random.default_rng(seed=rand_seed)
     
     
     with open(filename, "w") as file:
+        
+        
         # first, write the total number of events
         primary_particle_PID = -1
-        r = np.sqrt(np.sum(np.power(vertex_xyz_cms,2)))
-        primary_particle_px = abs_momentum/r*vertex_xyz_cms[0]
-        primary_particle_py = abs_momentum/r*vertex_xyz_cms[1]
-        primary_particle_pz = abs_momentum/r*vertex_xyz_cms[2]     
-        
+
         file.write(f"# nevents {Nevents}\n\n")
         for i in range(Nevents):
-            file.write(f"n {i}  \t {primary_particle_PID}\t  {vertex_xyz_det[0]}\t  {vertex_xyz_det[1]}\t {vertex_xyz_det[2]}\t {primary_particle_px}\t {primary_particle_py}\t {primary_particle_pz}\n")
-            rand_seed_i = None if rand_seed is None else rand_seed+i
-            
             # Generate a random vertex if a range was given
             if vertex_xyz.ndim==2:
                 vertex_temp = np.array([rng.uniform(*vertex_xyz[0]), rng.uniform(*vertex_xyz[1]), rng.uniform(*vertex_xyz[2])])
                 if which_coordinate=="CMS":
                     # Convert to dtector coordinate and # turn into mm
-                    vertex_xyz_det = np.array([vertex_temp[2],-vertex_temp[0],-vertex_temp[1]+85.47*unit.m])*10 
+                    vertex_xyz_det = np.array([vertex_temp[2],vertex_temp[0],-vertex_temp[1]+85.47*unit.m])*10 
                     vertex_xyz_cms = vertex_temp*10
                     
                 else:
                     vertex_xyz_det = vertex_temp*10
-                    vertex_xyz_cms = np.array([-vertex_temp[1],-vertex_temp[2]+85.47*unit.m,vertex_temp[0]])*10
-                    
+                    vertex_xyz_cms = np.array([vertex_temp[1],-vertex_temp[2]+85.47*unit.m,vertex_temp[0]])*10
+                 
+                
+            # Calculate the momentum of the parent particle
+            r = np.sqrt(np.sum(np.power(vertex_xyz_cms,2)))
+            primary_particle_px = abs_momentum/r*vertex_xyz_cms[2]
+            primary_particle_py = abs_momentum/r*vertex_xyz_cms[0]
+            primary_particle_pz = -abs_momentum/r*vertex_xyz_cms[1]     
+            
+            # Write parent particle
+            file.write(f"n {i}  \t {primary_particle_PID}\t  0.0     0.0    0.0    {primary_particle_px}\t {primary_particle_py}\t {primary_particle_pz}\n")
+            rand_seed_i = None if rand_seed is None else rand_seed+i
 
+                    
+            # Decay products
             p4vec_1,p4vec_2 = twobody_decay_MA(mass, abs_momentum, vertex_xyz_cms, decayproduct_pid=decayproduct_pid, rand_seed=rand_seed_i)
-            file.write(f"\t {decayproduct_pid[0]}\t  {vertex_xyz_det[0]}\t  {vertex_xyz_det[1]}\t {vertex_xyz_det[2]}\t {p4vec_1[0]}\t {p4vec_1[1]}\t {-p4vec_1[2]}\n")
-            file.write(f"\t {decayproduct_pid[0]}\t  {vertex_xyz_det[0]}\t  {vertex_xyz_det[1]}\t {vertex_xyz_det[2]}\t {p4vec_2[0]}\t {p4vec_2[1]}\t {-p4vec_2[2]}\n")
+            # print(vertex_xyz_cms,p4vec_1,p4vec_2)
+            # p4vec_1 = [E, px, py,pz] in CMS coordinate. To traslate it to GEANT coordinate: 
+            file.write(f"\t {decayproduct_pid[0]}\t  {vertex_xyz_det[0]}\t  {vertex_xyz_det[1]}\t {vertex_xyz_det[2]}\t {p4vec_1[3]}\t {p4vec_1[1]}\t {-p4vec_1[2]}\n")
+            file.write(f"\t {decayproduct_pid[1]}\t  {vertex_xyz_det[0]}\t  {vertex_xyz_det[1]}\t {vertex_xyz_det[2]}\t {p4vec_2[3]}\t {p4vec_2[1]}\t {-p4vec_2[2]}\n")
             
             
             
@@ -254,7 +263,7 @@ def generate_twobody_vertex_range(filename, abs_momentum, vertex_xyz, theta_rang
     # Transform vertex position to detector coordinate to feed to simulation
     vertex_xyz = np.array(vertex_xyz)
     vertex_xyz_det = vertex_xyz*10
-    vertex_xyz_cms = np.array([-vertex_xyz[1],-vertex_xyz[2]+85.47*unit.m,vertex_xyz[0]])*10
+    vertex_xyz_cms = np.array([vertex_xyz[1],-vertex_xyz[2]+85.47*unit.m,vertex_xyz[0]])*10
         
     rng = np.random.default_rng(seed=rand_seed)
     with open(filename, "w") as file:

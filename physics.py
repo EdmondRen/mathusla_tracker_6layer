@@ -135,7 +135,7 @@ class Track:
 
     def Name(self, pdg):
         if pdg == 13:
-            return "mu-"
+            return r"mu-"
         if pdg == -13:
             return "mu+"
         if pdg == 11:
@@ -146,8 +146,14 @@ class Track:
             return "pi+" 
         if pdg == -211:
             return "pi-"
+        if pdg == 321:
+            return "K+"  
+        if pdg == -321:
+            return "K-"          
         if pdg == 2112:
-            return "n"         
+            return "n"  
+        if pdg == -2112:
+            return r"n bar"          
         if pdg == 2212:
             return "p"         
         return "pdg: " + str(pdg)# + ", " + + str(round(self.pointList[0].energy, 2)) + "MeV"

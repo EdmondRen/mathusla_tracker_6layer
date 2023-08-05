@@ -15,6 +15,31 @@ from detector import Detector
 import physics,cutflow,util, detector, event
 
 
+namemap_pdg = { \
+            13: r"$\mu^-$",
+            -13: r"$\mu^+$",
+            11: r"$e^-$",
+            -11: r"$e^+$",
+            211: r"$\pi^+$",
+            -211: r"$\pi^-$",
+            130: r"$K^0_L$",
+            311: r"$K^0$",
+            -311: r"$K^0$",  
+            321: r"$K^+$",
+            -321: r"$K^-$",                 
+           2112: r"$n$",
+           -2112: r"$\bar{n}$",
+           2212: r"$p$",
+           -2212: r"$\bar{p}$",
+}
+colormap_pdg = { \
+            13: "c",
+            -13: "c",
+            11: "g",
+            -11: "m",
+            211: "b"
+}
+
 
 
 class Visualizer:
@@ -339,7 +364,7 @@ def root_2D_Histogram(data_x, data_z, xlims, zlims, Title='Plot', xbins=100, zbi
     canv.SaveAs(fname)
     
     
-def drawdet_xz(use_cms=False, axis=None, layer_height_vis=0.2, alpha=0.1):
+def drawdet_xz(use_cms=False, axis=None, layer_height_vis=0.2, alpha=0.1, draw_wall=True):
 #     use_cms=False
 #     axis=None
 #     layer_height_vis=0.2
@@ -355,8 +380,8 @@ def drawdet_xz(use_cms=False, axis=None, layer_height_vis=0.2, alpha=0.1):
                   det.module_x_displacement[ix]-det.module_x_edge_length*0.5,
                   det.module_x_displacement[ix]+det.module_x_edge_length*0.5,
                   det.module_x_displacement[ix]+det.module_x_edge_length*0.5]
-        # Loop 7 layers
-        for iz in range(len(det.LayerYLims)):
+        # Loop 8 tracker layers
+        for iz in range(2, len(det.LayerYLims)):
             # yi = 0.5*(det.LayerYLims[i][0] + det.LayerYLims[i][1])
             # layerZ = [det.layer_z_displacement[iz]-layer_height_vis*0.5,
             #          det.layer_z_displacement[iz]+layer_height_vis*0.5,
@@ -368,11 +393,47 @@ def drawdet_xz(use_cms=False, axis=None, layer_height_vis=0.2, alpha=0.1):
                      yi+layer_height_vis*0.5,
                      yi-layer_height_vis*0.5,]            
             verts.append(np.transpose([layerX, layerZ]))
+            
+    # Loop 2 Floor layers
+    layerX = [det.module_x_displacement[0]-det.module_x_edge_length*0.5,
+              det.module_x_displacement[0]-det.module_x_edge_length*0.5,
+              det.module_x_displacement[-1]+det.module_x_edge_length*0.5,
+              det.module_x_displacement[-1]+det.module_x_edge_length*0.5]
+    for iz in range(2):
+        yi = (0.5*(det.LayerYLims[iz][0] + det.LayerYLims[iz][1])-8550)*0.01 # minus the y offset and turns into meter
+        layerZ = [yi-layer_height_vis*0.5,
+                 yi+layer_height_vis*0.5,
+                 yi+layer_height_vis*0.5,
+                 yi-layer_height_vis*0.5,]            
+        verts.append(np.transpose([layerX, layerZ])) 
+        
+    # Loop 2 Wall layers
+    if draw_wall:
+        layerX1 = [det.module_x_displacement[0]-det.module_x_edge_length*0.5 -0.01 -layer_height_vis,
+                  det.module_x_displacement[0]-det.module_x_edge_length*0.5 -0.01 -layer_height_vis,
+                  det.module_x_displacement[0]-det.module_x_edge_length*0.5 -0.01 +layer_height_vis,
+                  det.module_x_displacement[0]-det.module_x_edge_length*0.5 -0.01 +layer_height_vis]
+        
+        layerX2 = [det.module_x_displacement[0]-det.module_x_edge_length*0.5 -1 -layer_height_vis,
+                  det.module_x_displacement[0]-det.module_x_edge_length*0.5 -1 -layer_height_vis,
+                  det.module_x_displacement[0]-det.module_x_edge_length*0.5 -1 +layer_height_vis,
+                  det.module_x_displacement[0]-det.module_x_edge_length*0.5 -1 +layer_height_vis]        
+        
+        vert_low = (0.5*(det.LayerYLims[0][0] + det.LayerYLims[0][1])-8550)*0.01 # minus the y offset and turns into meter
+        vert_high = (0.5*(det.LayerYLims[4][0] + det.LayerYLims[4][1])-8550)*0.01 # minus the y offset and turns into meter
+        layerZ = [vert_low,
+                 vert_high,
+                 vert_high,
+                 vert_low,]            
+        verts.append(np.transpose([layerX1, layerZ]))         
+        verts.append(np.transpose([layerX2, layerZ]))         
 
     col = collections.PolyCollection(verts, alpha=alpha)
     axis.add_collection(col)
     
-drawdet_yz=drawdet_xz
+    
+def drawdet_yz(use_cms=False, axis=None, layer_height_vis=0.2, alpha=0.1):
+    drawdet_xz(use_cms=use_cms, axis=axis, layer_height_vis=layer_height_vis, alpha=alpha, draw_wall=False)
 
 def drawdet_xy(use_cms=False, axis=None, layer_height_vis=0.2, alpha=0.1):
     if axis is None:
@@ -394,6 +455,24 @@ def drawdet_xy(use_cms=False, axis=None, layer_height_vis=0.2, alpha=0.1):
                       det.module_y_displacement[iy]+det.module_y_edge_length*0.5,
                       det.module_y_displacement[iy]-det.module_y_edge_length*0.5]
             verts.append(np.transpose([layerX, layerY]))
+            
+            
+    layerX1 = [det.module_x_displacement[0]-det.module_x_edge_length*0.5 -0.01 -layer_height_vis,
+              det.module_x_displacement[0]-det.module_x_edge_length*0.5 -0.01 -layer_height_vis,
+              det.module_x_displacement[0]-det.module_x_edge_length*0.5 -0.01 +layer_height_vis,
+              det.module_x_displacement[0]-det.module_x_edge_length*0.5 -0.01 +layer_height_vis]
+    
+    layerX2 = [det.module_x_displacement[0]-det.module_x_edge_length*0.5 -1 -layer_height_vis,
+          det.module_x_displacement[0]-det.module_x_edge_length*0.5 -1 -layer_height_vis,
+          det.module_x_displacement[0]-det.module_x_edge_length*0.5 -1 +layer_height_vis,
+          det.module_x_displacement[0]-det.module_x_edge_length*0.5 -1 +layer_height_vis]        
+
+    layerY = [det.module_y_displacement[0]-det.module_y_edge_length*0.5,
+              det.module_y_displacement[-1]+det.module_y_edge_length*0.5,
+              det.module_y_displacement[-1]+det.module_y_edge_length*0.5,
+              det.module_y_displacement[0]-det.module_y_edge_length*0.5]          
+    verts.append(np.transpose([layerX1, layerY]))              
+    verts.append(np.transpose([layerX2, layerY]))              
 
     col = collections.PolyCollection(verts, alpha=alpha)
     axis.add_collection(col)    
@@ -407,44 +486,85 @@ def drawdet_xy(use_cms=False, axis=None, layer_height_vis=0.2, alpha=0.1):
 
 cut=cutflow.sample_space("")
 
-def plot_truth(event, fig=None, disp_det_view=True, disp_vertex=True, disp_first_hit=False, make_legend=True):
+def pdg_color(pdg):
+    if pdg in colormap_pdg.keys():
+        return colormap_pdg[pdg]
+    
+    return "y"   
+
+def pdg_name(pdg):
+    
+    # if pdg == 13:
+    #     return r"$\mu^-$"
+    # if pdg == -13:
+    #     return "mu+"
+    # if pdg == 11:
+    #     return "e-"
+    # if pdg == -11:
+    #     return "e+"
+    # if pdg == 211:
+    #     return "pi+" 
+    # if pdg == -211:
+    #     return "pi-"
+    # if pdg == 321:
+    #     return "K+"  
+    # if pdg == -321:
+    #     return "K-"          
+    # if pdg == 2112:
+    #     return "n"  
+    # if pdg == -2112:
+    #     return r"n bar"          
+    # if pdg == 2212:
+    #     return "p" 
+    if pdg in namemap_pdg.keys():
+        return namemap_pdg[pdg]    
+    
+    return "pdg: " + str(pdg)# + ", " + + str(round(self.pointList[0].energy, 2)) + "MeV"
+
+def plot_truth(event, fig=None, disp_det_view=True, disp_vertex=True, disp_filereader_vertex=True, filereader_vertex_ind=1, disp_first_hit=False, make_legend=True):
     """
     Function to plot the truth of one event
     Tom Ren, 2023.2
-    """
-    # Extract truth information
-    event.ExtractTruthPhysics()
-    
+    """ 
     # Prepare the canvas
     if fig is None:
         fig,axs=plt.subplots(2,2,figsize=(12,9))
         axs=axs.flatten().tolist()
     else:
         axs=fig.axes
+        
+#     # Extract truth information
+#     event.ExtractTruthPhysics()        
+    
+#     # Plot tracks
+#     for track in event.truthTrackList:
+#         x = [];y = [];z = []
+#         for point in track.pointList:
+#             coord_cms = [point.location.x,point.location.y,point.location.z]
+#             coord_det = util.coord_cms2det(np.array(coord_cms))
+            
+#             x.append(coord_det[0])
+#             y.append(coord_det[1])
+#             z.append(coord_det[2])
+        
+#         axs[0].plot(x, z, color=track.color(),marker=".",linewidth=1,markersize=1,label=track.LabelString())
+#         axs[1].plot(y, z, color=track.color(),marker=".",linewidth=1,markersize=1,label=track.LabelString())
+#         axs[2].plot(x, y, color=track.color(),marker=".",linewidth=1,markersize=1,label=track.LabelString())
+        
+    # Extract truth information
+    event.ExtractTruthPhysics_list()        
     
     # Plot tracks
-    existing_labels=[]
-    for track in event.truthTrackList:
-        x = [];y = [];z = []
-        for point in track.pointList:
-            coord_cms = [point.location.x,point.location.y,point.location.z]
-            coord_det = util.coord_cms2det(np.array(coord_cms))
-            
-            x.append(coord_det[0])
-            y.append(coord_det[1])
-            z.append(coord_det[2])
-        
-        # If-else to avoid duplicating lables
-        # if track.LabelString() not in existing_labels:
-        if 1:
-            axs[0].plot(x, z, color=track.color(),marker=".",linewidth=1,markersize=4,label=track.LabelString())
-            axs[1].plot(y, z, color=track.color(),marker=".",linewidth=1,markersize=4,label=track.LabelString())
-            axs[2].plot(x, y, color=track.color(),marker=".",linewidth=1,markersize=4,label=track.LabelString())
-            existing_labels.append(track.LabelString())
-        else:
-            axs[0].plot(x, z, color=track.color(),marker=".",linewidth=1,markersize=4)
-            axs[1].plot(y, z, color=track.color(),marker=".",linewidth=1,markersize=4)
-            axs[2].plot(x, y, color=track.color(),marker=".",linewidth=1,markersize=4)
+    for track in event.truthTrackList_list:      
+        # Each track is a list of each point is [x,y,z,t, PID, Energy, TRACK_ID]
+        x,y,z = util.coord_cms2det(np.array(track[:3]))        
+        pid = track[4][0]
+        track_label = pdg_name(pid)
+        track_color = pdg_color(pid)
+        axs[0].plot(x, z, color=track_color,marker=".",linewidth=1,markersize=1,label=track_label)
+        axs[1].plot(y, z, color=track_color,marker=".",linewidth=1,markersize=1,label=track_label)
+        axs[2].plot(x, y, color=track_color,marker=".",linewidth=1,markersize=1,label=track_label)
+                
             
     # Plot vertex
     if disp_vertex:
@@ -457,11 +577,23 @@ def plot_truth(event, fig=None, disp_det_view=True, disp_vertex=True, disp_first
 
                 #truth vertex location
                 vertex_coord_dete = util.coord_cms2det(np.array([vert_truth[0], vert_truth[1], vert_truth[2]]))
-                axs[0].scatter(vertex_coord_dete[0],vertex_coord_dete[2],s=60,marker="*", color="tab:green",alpha=0.5,zorder=100,label="Primary Vertex")
-                axs[1].scatter(vertex_coord_dete[1],vertex_coord_dete[2],s=60,marker="*", color="tab:green",alpha=0.5,zorder=100)
-                axs[2].scatter(vertex_coord_dete[0],vertex_coord_dete[1],s=60,marker="*", color="tab:green",alpha=0.5,zorder=100)            
+                axs[0].scatter(vertex_coord_dete[0],vertex_coord_dete[2],s=60,marker="*", color="tab:green",alpha=1,zorder=100,label="Primary Vertex")
+                axs[1].scatter(vertex_coord_dete[1],vertex_coord_dete[2],s=60,marker="*", color="tab:green",alpha=1,zorder=100)
+                axs[2].scatter(vertex_coord_dete[0],vertex_coord_dete[1],s=60,marker="*", color="tab:green",alpha=1,zorder=100)            
         except:
             pass    
+        
+    # Plot vertex from filereader:
+    if disp_filereader_vertex:
+        try:
+            vertex_truth = np.array([event.Tree.GenParticle_x[filereader_vertex_ind]-(70+49.5)*1000,event.Tree.GenParticle_y[filereader_vertex_ind],-event.Tree.GenParticle_z[filereader_vertex_ind]])*1e-3
+            # Plot the truth vertex
+            axs=fig.axes
+            axs[0].scatter(vertex_truth[0],vertex_truth[2],s=30,marker="D", color="cyan",alpha=1,zorder=100,label="Truth Vertex")
+            axs[1].scatter(vertex_truth[1],vertex_truth[2],s=30,marker="D", color="cyan",alpha=1,zorder=100)
+            axs[2].scatter(vertex_truth[0],vertex_truth[1],s=30,marker="D", color="cyan",alpha=1,zorder=100)        
+        except:
+            pass
             
     if disp_first_hit:
         first_hit = util.coord_cms2det(np.array([event.Tree.Hit_x[0], event.Tree.Hit_y[0], event.Tree.Hit_z[0]]))
@@ -472,10 +604,10 @@ def plot_truth(event, fig=None, disp_det_view=True, disp_vertex=True, disp_first
     
     if disp_det_view:
         drawdet_xz(axis=axs[0],alpha=0.2)
-        drawdet_xz(axis=axs[1],alpha=0.2)
+        drawdet_yz(axis=axs[1],alpha=0.2)
         drawdet_xy(axis=axs[2],alpha=0.2)
             
-    axs[0].set_xlabel("x [m]")
+    axs[0].set_xlabel("x (beamline) [m]")
     axs[0].set_ylabel("z [m]")
     axs[1].set_xlabel("y [m]")
     axs[1].set_ylabel("z [m]")
@@ -484,7 +616,9 @@ def plot_truth(event, fig=None, disp_det_view=True, disp_vertex=True, disp_first
     # Put legend in the last grid
     handles, labels = axs[0].get_legend_handles_labels()
     if make_legend:
-        fig.legend(handles, labels, loc=(0.52,0.05))
+        labels_unique, labels_inds = np.unique(labels, return_index=True)
+        handles=np.array(handles)
+        fig.legend(handles[labels_inds], labels_unique, loc=(0.52,0.05),framealpha=1,ncol=4, fontsize=9)
     axs[3].axis("off")
     fig.tight_layout()
     return fig
@@ -540,10 +674,10 @@ def plot_digi(event, inds=None, fig=None, disp_det_view=False):
     
     if disp_det_view:
         drawdet_xz(axis=axs[0],alpha=0.2)
-        drawdet_xz(axis=axs[1],alpha=0.2)
+        drawdet_yz(axis=axs[1],alpha=0.2)
         drawdet_xy(axis=axs[2],alpha=0.2) 
     
-    axs[0].set_xlabel("x [m]")
+    axs[0].set_xlabel("x (beamline) [m]")
     axs[0].set_ylabel("z [m]")
     axs[1].set_xlabel("y [m]")
     axs[1].set_ylabel("z [m]")
@@ -551,7 +685,7 @@ def plot_digi(event, inds=None, fig=None, disp_det_view=False):
     axs[2].set_ylabel("y [m]")
     # Put legend in the last grid
     handles, labels = axs[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc=(0.52,0.05))
+    fig.legend(handles, labels, loc=(0.52,0.05),framealpha=1,ncol=4, fontsize=9)
     axs[3].axis("off")
     fig.tight_layout()
     return fig
@@ -572,7 +706,7 @@ linestyle_tuple = [
      (0, (3, 10, 1, 10, 1, 10))]
 
 def plot_recon(event, fig=None, disp_det_view=False, disp_non_vertex_tracks=True,
-              disp_unused_hits=True, disp_recon_vertex=True):
+              disp_unused_hits=True, disp_recon_vertex=True, disp_vertex_track_extension = False, make_legend=True, force_limit=True):
     """
     Function to plot the digitization of one event
     Tom Ren, 2023.2
@@ -595,12 +729,29 @@ def plot_recon(event, fig=None, disp_det_view=False, disp_non_vertex_tracks=True
         loop_range = 2
     else:
         loop_range = 1
+       
+    # Hold lines in collection until the end
+    collection_0 = []
+    collection_1 = []
+    collection_2 = []        
+    colors = []
+    linestyles = []
+    alphas = []
+    labels = []
         
     # Loop both tracks used in vertex and non-vertex tracks
+    i_track_total=-1
+    points_x = []
+    points_y = []
+    points_z = []  
+    points_x_err = []
+    points_y_err = []
+    points_z_err = []   
     for ikey in range(loop_range):
         # Plot reconstructed tracks
-        name_append="" if ikey==0 else "(non vertex)"
+        name_append="" if ikey==0 else "\n (non vertex)"
         for i_track in range(len(event_vis[key1s[ikey]])):
+            i_track_total+=1
             # Read the reconstructed track
             track=event_vis[key1s[ikey]][i_track]
             track=util.coord_cms2det(np.array(track))
@@ -629,17 +780,55 @@ def plot_recon(event, fig=None, disp_det_view=False, disp_non_vertex_tracks=True
                                  xerr=hits_uncertainty[0],yerr=hits_uncertainty[1],
                                  color="red",capsize=2,ls='none',alpha=0.3, fmt=".")        
             # Plot KF reconstructed track
-            axs[0].plot(track[0],track[2], color="black",linestyle=linestyle_tuple[i_track%13], linewidth=1,label=f"Recon track {i_track}{name_append}")
-            axs[1].plot(track[1],track[2], color="black",linestyle=linestyle_tuple[i_track%13], linewidth=1,label=f"Recon track {i_track}{name_append}")
-            axs[2].plot(track[0],track[1], color="black",linestyle=linestyle_tuple[i_track%13], linewidth=1,label=f"Recon track {i_track}{name_append}") 
+            axs[0].plot(track[0],track[2], color="black",linestyle=linestyle_tuple[i_track_total%13], linewidth=1,label=f"KF track {i_track_total}{name_append}")
+            axs[1].plot(track[1],track[2], color="black",linestyle=linestyle_tuple[i_track_total%13], linewidth=1,label=f"KF track {i_track_total}{name_append}")
+            axs[2].plot(track[0],track[1], color="black",linestyle=linestyle_tuple[i_track_total%13], linewidth=1,label=f"KF track {i_track_total}{name_append}")
+            # collection_0.append(np.transpose([track[0],track[2]]))
+            # collection_1.append(np.transpose([track[1],track[2]]))
+            # collection_2.append(np.transpose([track[0],track[1]]))            
+            # colors.append("black")
+            # linestyles.append(linestyle_tuple[i_track_total%13])
+            # alphas.append(1)
+            # labels.append(f"KF track {i_track_total}{name_append}")
             
+           
+
     # Plot vertex
     if disp_recon_vertex:
         for ivertex, vertex in enumerate(event_vis["vertex"]):
             vertex_coord_dete = util.coord_cms2det(np.array(vertex))
-            axs[0].scatter(vertex_coord_dete[0],vertex_coord_dete[2],s=60,marker="*", color="tab:purple",alpha=0.5,zorder=100,label=f"Recon vertex {ivertex}")
-            axs[1].scatter(vertex_coord_dete[1],vertex_coord_dete[2],s=60,marker="*", color="tab:purple",alpha=0.5,zorder=100)
-            axs[2].scatter(vertex_coord_dete[0],vertex_coord_dete[1],s=60,marker="*", color="tab:purple",alpha=0.5,zorder=100)  
+            axs[0].scatter(vertex_coord_dete[0],vertex_coord_dete[2],s=60,marker="+", color=f"C{ivertex+1}",alpha=0.9,zorder=100,label=f"Recon vertex {ivertex}")
+            axs[1].scatter(vertex_coord_dete[1],vertex_coord_dete[2],s=60,marker="+", color=f"C{ivertex+1}",alpha=0.9,zorder=100)
+            axs[2].scatter(vertex_coord_dete[0],vertex_coord_dete[1],s=60,marker="+", color=f"C{ivertex+1}",alpha=0.9,zorder=100)  
+    
+    # Plot the extension of tracks to vertex
+    if disp_vertex_track_extension:
+        # track best estimates
+        Tree=event.Tree
+        vert_inds = util.unzip(Tree.Vertex_k_m_trackIndices)
+        x0_s = util.c2list(Tree.Track_k_m_x0)
+        y0_s = util.c2list(Tree.Track_k_m_y0)
+        z0_s = util.c2list(Tree.Track_k_m_z0)        
+        # t0_s = util.unzip(Tree.Track_k_m_t0)   
+        # vx_s = util.unzip(Tree.Track_k_m_velX)
+        # vy_s = util.unzip(Tree.Track_k_m_velY)
+        # vz_s = util.unzip(Tree.Track_k_m_velZ)
+        for ivertex, vertex in enumerate(event_vis["vertex"]):
+            vertex_coord_dete = util.coord_cms2det(np.array(vertex))
+            for trk_ind in vert_inds[ivertex]:
+                trk_ind=int(trk_ind)
+                track_endpoint_coord_det = util.coord_cms2det(np.array([x0_s[trk_ind], y0_s[trk_ind], z0_s[trk_ind]]))
+                # axs[0].plot([vertex_coord_dete[0],track_endpoint_coord_det[0]],[vertex_coord_dete[2],track_endpoint_coord_det[2]], color=f"C{ivertex+1}",alpha=0.1)
+                # axs[1].plot([vertex_coord_dete[1],track_endpoint_coord_det[1]],[vertex_coord_dete[2],track_endpoint_coord_det[2]], color=f"C{ivertex+1}",alpha=0.1)
+                # axs[2].plot([vertex_coord_dete[0],track_endpoint_coord_det[0]],[vertex_coord_dete[1],track_endpoint_coord_det[1]], color=f"C{ivertex+1}",alpha=0.1)
+                collection_0.append([[vertex_coord_dete[0], vertex_coord_dete[2]], [track_endpoint_coord_det[0],track_endpoint_coord_det[2]]])
+                collection_1.append([[vertex_coord_dete[1], vertex_coord_dete[2]], [track_endpoint_coord_det[1],track_endpoint_coord_det[2]]])
+                collection_2.append([[vertex_coord_dete[0], vertex_coord_dete[1]], [track_endpoint_coord_det[0],track_endpoint_coord_det[1]]])
+                colors.append(f"C{ivertex+1}")
+                linestyles.append("--")
+                alphas.append(0.2)                
+                labels.append("Line to vertex")
+                
         
     # Plot unused hits
     if disp_unused_hits:
@@ -660,14 +849,41 @@ def plot_recon(event, fig=None, disp_det_view=False, disp_non_vertex_tracks=True
         axs[1].errorbar(hits[1],hits[2],xerr=hits_uncertainty[1],yerr=hits_uncertainty[2],
                              color="C0",capsize=2,ls='none',alpha=0.3, fmt=".")
         axs[2].errorbar(hits[0],hits[1],xerr=hits_uncertainty[0],yerr=hits_uncertainty[1],
-                             color="C0",capsize=2,ls='none',alpha=0.3, fmt=".")      
+                             color="C0",capsize=2,ls='none',alpha=0.3, fmt=".")  
+        
+    # Display all added lines    
+    if len(collection_0)>0:
+        c0 = collections.LineCollection(collection_0, color=colors, alpha=alphas, linestyle=linestyles)
+        c1 = collections.LineCollection(collection_1, color=colors, alpha=alphas, linestyle=linestyles)
+        c2 = collections.LineCollection(collection_2, color=colors, alpha=alphas, linestyle=linestyles)        
+        axs[0].add_collection(c0)
+        axs[1].add_collection(c1)
+        axs[2].add_collection(c2)
         
     if disp_det_view:
         drawdet_xz(axis=axs[0],alpha=0.2)
-        drawdet_xz(axis=axs[1],alpha=0.2)
+        drawdet_yz(axis=axs[1],alpha=0.2)
         drawdet_xy(axis=axs[2],alpha=0.2) 
+        
+    if force_limit:
+        ax_xlim = list(axs[0].get_xlim())
+        ax_ylim = list(axs[1].get_xlim())
+        ax_zlim = list(axs[0].get_ylim())
+        ax_xlim[0] = -51 if ax_xlim[0]<-50 else ax_xlim[0]
+        ax_xlim[1] = 50 if ax_xlim[1]>50 else ax_xlim[1]
+        ax_ylim[0] = -50 if ax_ylim[0]<-50 else ax_ylim[0]
+        ax_ylim[1] = 50 if ax_ylim[1]>50 else ax_ylim[1] 
+        ax_zlim[0] = -21 if ax_zlim[0]<-21 else ax_zlim[0]
+        ax_zlim[1] = 11.5 if ax_zlim[1]>11.5 else ax_zlim[1] 
+        axs[0].set_xlim(*ax_xlim)
+        axs[0].set_ylim(*ax_zlim)
+        axs[1].set_xlim(*ax_ylim)
+        axs[1].set_ylim(*ax_zlim)
+        axs[2].set_xlim(*ax_xlim)
+        axs[2].set_ylim(*ax_ylim)
+        
     
-    axs[0].set_xlabel("x [m]")
+    axs[0].set_xlabel("x (beamline) [m]")
     axs[0].set_ylabel("z [m]")
     axs[1].set_xlabel("y [m]")
     axs[1].set_ylabel("z [m]")
@@ -675,7 +891,10 @@ def plot_recon(event, fig=None, disp_det_view=False, disp_non_vertex_tracks=True
     axs[2].set_ylabel("y [m]")
     # Put legend in the last grid
     handles, labels = axs[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc=(0.52,0.05))
+    if make_legend:
+        labels_unique, labels_inds = np.unique(labels, return_index=True)
+        handles=np.array(handles,dtype=object)
+        fig.legend(handles[labels_inds], labels_unique,framealpha=1,ncol=4, fontsize=9, bbox_to_anchor=(0.55, 0., 0.5, 0.5),loc="upper left")    
     axs[3].axis("off")
     fig.tight_layout()
     return fig    
@@ -711,7 +930,7 @@ def plot_multiple_events(filename, tree_name, nevents=300):
     plt.xlabel('y [m]')
     plt.ylabel('z [m]')
     # ylim(bottom=0)
-    drawdet_xz()    
+    drawdet_yz()    
 
     plt.sca(axs[2])
     plt.xlabel('x [m]')

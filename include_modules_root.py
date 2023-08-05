@@ -396,6 +396,21 @@ import ctypes
 # from array import array
 import copy as cp
 def BayesDivide(n_pass, n_total, n_pass_err=None, n_total_err=None):
+    """
+    Using BayesDivide to calculate the uncertainty of fraction calculation by dividing one number with another.
+    
+    INPUT:
+    ---
+    n_pass:
+        list of numerator
+    n_total:
+        list of demonimnator
+        
+    RETURN:
+    ---
+    efficiency, efficiency_unc_l, efficiency_unc_h:
+        lists of the fraction, the lower sided uncertainty, and the upper sided uncertainty.
+    """
     if n_pass_err is None:
         n_pass_err = np.sqrt(n_pass)
         n_total_err = np.sqrt(n_total)
@@ -406,6 +421,8 @@ def BayesDivide(n_pass, n_total, n_pass_err=None, n_total_err=None):
     mask = n_total==0
     n_pass[mask]=0
     n_total[mask]=1
+    n_pass_err[mask]=1
+    n_total_err[mask]=1
     
     gdiv = ROOT.TGraphAsymmErrors()
     h1 = thist([0], bins=len(n_pass), range=(0,100)) # pass
